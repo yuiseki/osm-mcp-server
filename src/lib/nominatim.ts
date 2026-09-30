@@ -1,3 +1,10 @@
+// Nominatim's usage policy requires an identifying User-Agent; requests with
+// the default one sent by Node's fetch are rejected with 403.
+// https://operations.osmfoundation.org/policies/nominatim/
+const headers = {
+  "User-Agent": "osm-mcp-server/0.1.0 (+https://github.com/yuiseki/osm-mcp-server)",
+};
+
 export const geocodeNominatim = async (
   text: string
 ): Promise<{
@@ -7,7 +14,8 @@ export const geocodeNominatim = async (
   const response = await fetch(
     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
       text
-    )}`
+    )}`,
+    { headers }
   );
   if (!response.ok) {
     throw new Error(`Error fetching geocode data: ${response.statusText}`);
@@ -30,7 +38,8 @@ export const reverseGeocodeNominatim = async (
   displayName: string;
 }> => {
   const response = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
+    { headers }
   );
   if (!response.ok) {
     throw new Error(
