@@ -6,11 +6,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // Runs the built bin against real services: npm run test:live.
 // Points at the maintainer's self-hosted OSM stack unless NOMINATIM_URL,
-// OVERPASS_URL or VALHALLA_URL say otherwise. Not part of npm test or CI.
+// OVERPASS_URL, VALHALLA_URL or TAGINFO_URL say otherwise. Not part of npm
+// test or CI.
 const env = {
   NOMINATIM_URL: process.env.NOMINATIM_URL || "https://nominatim.yuiseki.net",
   OVERPASS_URL: process.env.OVERPASS_URL || "https://overpass.yuiseki.net/api",
   VALHALLA_URL: process.env.VALHALLA_URL || "https://valhalla.yuiseki.net",
+  TAGINFO_URL: process.env.TAGINFO_URL || "https://taginfo.yuiseki.net",
 };
 
 const bin = fileURLToPath(new URL("../../build/index.js", import.meta.url));
@@ -96,5 +98,18 @@ describe.concurrent("live", { timeout: 60_000 }, () => {
     const [start] = route.geometry.coordinates;
     expect(start[0]).toBeCloseTo(tokyoTower.lon, 2);
     expect(start[1]).toBeCloseTo(tokyoTower.lat, 2);
+  });
+
+  it("finds cuisine=ramen with taginfo", async () => {
+    const { values } = await call("osm_taginfo_values", { key: "cuisine", query: "ramen", limit: 5 });
+    expect(values[0].value).toBe("ramen");
+    expect(values[0].count).toBeGreaterThan(1000);
+  });
+
+  it("describes amenity=cafe with taginfo", async () => {
+    const tag = await call("osm_taginfo_tag", { key: "amenity", value: "cafe", language: "ja" });
+    expect(tag.count.all).toBeGreaterThan(100000);
+    expect(tag.wiki.map((w: { lang: string }) => w.lang)).toEqual(["en", "ja"]);
+    expect(tag.combinations.length).toBeGreaterThan(0);
   });
 });

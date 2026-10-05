@@ -1,0 +1,26 @@
+{
+  "data_until": "2026-01-29T00:59:50Z",
+  "page": 1,
+  "rp": 3,
+  "total": 7973,
+  "data": [
+    {
+      "other_key": "amenity",
+      "together_count": 1407910,
+      "to_fraction": 0.982,
+      "from_fraction": 0.0433
+    },
+    {
+      "other_key": "name",
+      "together_count": 1383713,
+      "to_fraction": 0.9651,
+      "from_fraction": 0.0124
+    },
+    {
+      "other_key": "addr:street",
+      "together_count": 727238,
+      "to_fraction": 0.5072,
+      "from_fraction": 0.0044
+    }
+  ]
+}

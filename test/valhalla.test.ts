@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userAgent } from "../src/lib/config.js";
-import { decodePolyline6, route, valhallaErrorDetail } from "../src/lib/valhalla.js";
+import { jsonErrorDetail } from "../src/lib/http.js";
+import { decodePolyline6, route } from "../src/lib/valhalla.js";
 import { mockFetch, requestOf } from "./helpers.js";
 
 afterEach(() => {
@@ -46,17 +47,17 @@ describe("decodePolyline6", () => {
   });
 });
 
-describe("valhallaErrorDetail", () => {
+describe("jsonErrorDetail", () => {
   it("keeps Valhalla's message and code", () => {
     expect(
-      valhallaErrorDetail(
+      jsonErrorDetail(
         '{"error_code":125,"error":"No costing method found: \'hovercraft\'","status_code":400,"status":"Bad Request"}'
       )
     ).toBe("No costing method found: 'hovercraft' (error_code 125)");
   });
 
   it("passes anything else through", () => {
-    expect(valhallaErrorDetail("<html>bad gateway</html>")).toBe("<html>bad gateway</html>");
+    expect(jsonErrorDetail("<html>bad gateway</html>")).toBe("<html>bad gateway</html>");
   });
 });
 

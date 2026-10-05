@@ -26,3 +26,16 @@ export const request = async (
   }
   return response;
 };
+
+/** Valhalla and taginfo explain a failed request as JSON with an error field. */
+export const jsonErrorDetail = (body: string): string => {
+  try {
+    const { error, error_code } = JSON.parse(body);
+    if (typeof error === "string") {
+      return error_code === undefined ? error : `${error} (error_code ${error_code})`;
+    }
+  } catch {
+    // not JSON
+  }
+  return body;
+};

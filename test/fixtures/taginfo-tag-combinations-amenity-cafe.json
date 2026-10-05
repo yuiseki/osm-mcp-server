@@ -1,0 +1,29 @@
+{
+  "data_until": "2026-01-29T00:59:50Z",
+  "page": 1,
+  "rp": 3,
+  "total": 283,
+  "data": [
+    {
+      "other_key": "name",
+      "other_value": "",
+      "together_count": 542553,
+      "to_fraction": 0.8774,
+      "from_fraction": 0.0048
+    },
+    {
+      "other_key": "addr:street",
+      "other_value": "",
+      "together_count": 204957,
+      "to_fraction": 0.3314,
+      "from_fraction": 0.0012
+    },
+    {
+      "other_key": "cuisine",
+      "other_value": "",
+      "together_count": 180533,
+      "to_fraction": 0.2919,
+      "from_fraction": 0.1259
+    }
+  ]
+}
