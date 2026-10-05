@@ -1,0 +1,74 @@
+{
+  "features": [
+    {
+      "properties": {
+        "fill-opacity": 0.33,
+        "fillColor": "#bf4040",
+        "opacity": 0.33,
+        "fill": "#bf4040",
+        "fillOpacity": 0.33,
+        "color": "#bf4040",
+        "contour": 10,
+        "metric": "time"
+      },
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              -139.999999,
+              30.000909
+            ],
+            [
+              -140.000818,
+              30.000818
+            ],
+            [
+              -140.000818,
+              29.999181
+            ],
+            [
+              -139.999181,
+              29.999181
+            ],
+            [
+              -139.999181,
+              30.000818
+            ],
+            [
+              -139.999999,
+              30.000909
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [],
+        "type": "MultiPoint"
+      },
+      "properties": {
+        "location_index": 0,
+        "type": "snapped"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -140,
+          30
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "location_index": 0,
+        "type": "input"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

@@ -112,4 +112,44 @@ describe.concurrent("live", { timeout: 60_000 }, () => {
     expect(tag.wiki.map((w: { lang: string }) => w.lang)).toEqual(["en", "ja"]);
     expect(tag.combinations.length).toBeGreaterThan(0);
   });
+
+  it("finds ramen shops near Tokyo Tower, nearest first", async () => {
+    const result = await call("osm_search_nearby", {
+      ...tokyoTower,
+      radius_m: 1000,
+      tags: [
+        { key: "amenity", value: "restaurant" },
+        { key: "cuisine", value: "ramen" },
+      ],
+    });
+    expect(result.total).toBeGreaterThan(0);
+    const distances = result.results.map((r: { distanceM: number }) => r.distanceM);
+    expect(distances).toEqual([...distances].sort((a, b) => a - b));
+    expect(distances.at(-1)).toBeLessThanOrEqual(1100);
+  });
+
+  it("finds a chain by its English brand name", async () => {
+    const result = await call("osm_search_nearby", {
+      ...tokyoStation,
+      radius_m: 800,
+      tags: [{ key: "amenity", value: "cafe" }],
+      name: "starbucks",
+    });
+    expect(result.total).toBeGreaterThan(0);
+  });
+
+  it("finds the area within a 15 minute walk of Tokyo Tower", async () => {
+    const result = await call("osm_isochrone", { ...tokyoTower, costing: "pedestrian", minutes: [15] });
+    expect(result.snappedTo.distanceM).toBeLessThan(100);
+    expect(result.contours).toHaveLength(1);
+    expect(result.contours[0].geometry.coordinates[0].length).toBeGreaterThan(6);
+  });
+
+  it("reports a start with no road nearby", async () => {
+    const result = await client.callTool({
+      name: "osm_isochrone",
+      arguments: { lat: 30, lon: -140, minutes: [10] },
+    });
+    expect(result.isError).toBe(true);
+  });
 });

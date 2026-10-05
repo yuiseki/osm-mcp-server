@@ -1,6 +1,6 @@
 # osm-mcp-server
 
-An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use OpenStreetMap: find places, look up addresses, query map features with Overpass, plan routes with Valhalla, and look up which tags mappers use with taginfo.
+An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use OpenStreetMap: find places, look up addresses, query map features with Overpass, search around a point, plan routes and reachable areas with Valhalla, and look up which tags mappers use with taginfo.
 
 ## Tools
 
@@ -9,7 +9,9 @@ An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use Op
 | `osm_geocoding` | Nominatim | Finds places by name or address. Returns several candidates (default 5, up to 20), because names are often ambiguous. Can be limited to countries and asked for a language. |
 | `osm_reverse_geocoding` | Nominatim | Finds the place and the address at a coordinate. |
 | `osm_overpass_query` | Overpass API | Runs an Overpass QL query and returns the matching elements (default 100, up to 1000), the total count, and when the data was last updated. |
+| `osm_search_nearby` | Overpass API | Finds features with given tags around a point, nearest first, without writing Overpass QL (e.g. `amenity=restaurant` and `cuisine=ramen` within 500 m). Can also filter by name or brand in any language. |
 | `osm_routing` | Valhalla | Plans a route through 2 to 20 locations by car, on foot, by bicycle and more. Returns the distance, the travel time and turn-by-turn directions, and the route line on request. |
+| `osm_isochrone` | Valhalla | Returns the area reachable from a point within up to four travel times or distances as GeoJSON polygons, and where the start was placed on the road network. |
 | `osm_taginfo_keys` | taginfo | Finds tag keys whose name contains a word, most used first. |
 | `osm_taginfo_values` | taginfo | Lists the values used with a key, most used first, optionally only those containing a word (e.g. `cuisine` values with `ramen`). |
 | `osm_taginfo_tag` | taginfo | Describes a tag or a key: how often it is used on nodes, ways and relations, its OSM wiki description in English and one more language, and the tags most often used with it. |

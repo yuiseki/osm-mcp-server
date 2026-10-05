@@ -9,9 +9,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { version } from "./lib/config.js";
 import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
+import { searchNearby } from "./lib/nearby.js";
 import { runOverpass } from "./lib/overpass.js";
 import { describeTag, keyValues, searchKeys } from "./lib/taginfo.js";
-import { costings, route } from "./lib/valhalla.js";
+import { costings, isochrone, route } from "./lib/valhalla.js";
 import { language, latitude, longitude, place } from "./lib/schemas.js";
 
 const server = new McpServer({
@@ -123,6 +124,61 @@ server.registerTool(
 );
 
 server.registerTool(
+  "osm_search_nearby",
+  {
+    title: "Search nearby",
+    description: [
+      "Find OpenStreetMap features with given tags around a point, nearest first, without writing Overpass QL.",
+      "Example: ramen shops within 500 m are tags [{key: 'amenity', value: 'restaurant'}, {key: 'cuisine', value: 'ramen'}].",
+      "Every tag must match. If you are not sure which tags mappers use, check with osm_taginfo_values or osm_taginfo_tag first.",
+      "Use osm_geocoding first to turn a place name into coordinates.",
+    ].join("\n"),
+    inputSchema: {
+      lat: latitude.describe("Latitude of the centre"),
+      lon: longitude.describe("Longitude of the centre"),
+      radius_m: z.number().int().min(1).max(10000).default(500).describe("Search radius in metres"),
+      tags: z
+        .array(
+          z.object({
+            key: z.string().min(1).describe("Tag key, e.g. amenity"),
+            value: z
+              .union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+              .optional()
+              .describe("Tag value, or several of which any may match; leave out to match any value"),
+          })
+        )
+        .min(1)
+        .max(5)
+        .describe("Tags that every result must have"),
+      name: z.string().min(1).optional().describe("Only features whose name or brand, in any language (name, name:en, brand, ...), contains this text; case-insensitive"),
+      limit: z.number().int().min(1).max(200).default(20).describe("Maximum number of results"),
+    },
+    outputSchema: {
+      timestampOsmBase: z.string().nullable().describe("When the OSM data was last updated"),
+      total: z.number().describe("Number of features that matched"),
+      truncated: z.boolean().describe("True when more matched than limit"),
+      incomplete: z
+        .boolean()
+        .describe("True when too many matched to sort them all; the results may miss nearer ones, so search a smaller radius"),
+      results: z.array(
+        z.object({
+          osmType: z.string(),
+          osmId: z.number(),
+          name: z.string().nullable(),
+          lat: latitude,
+          lon: longitude,
+          distanceM: z.number().describe("Straight-line distance from the centre in metres"),
+          tags: z.record(z.string(), z.string()),
+        })
+      ),
+    },
+    annotations,
+  },
+  async ({ lat, lon, radius_m, tags, name, limit }) =>
+    result(await searchNearby({ lat, lon, radiusM: radius_m, tags, name, limit }))
+);
+
+server.registerTool(
   "osm_routing",
   {
     title: "Route",
@@ -181,6 +237,54 @@ server.registerTool(
   },
   async ({ locations, costing, language, include_geometry }) =>
     result(await route(locations, { costing, language, includeGeometry: include_geometry }))
+);
+
+server.registerTool(
+  "osm_isochrone",
+  {
+    title: "Isochrone",
+    description:
+      "Find the area reachable from a point within given travel times or distances, with Valhalla on OpenStreetMap roads and paths, e.g. everywhere within a 15 minute walk. Returns one GeoJSON polygon per time or distance. Check snappedTo: it is where the start was moved onto the network, and a large distanceM means the start is far from any road or path.",
+    inputSchema: {
+      lat: latitude.describe("Latitude of the start"),
+      lon: longitude.describe("Longitude of the start"),
+      costing: z.enum(costings).default("auto").describe("How to travel: auto (car), pedestrian, bicycle, ..."),
+      minutes: z
+        .array(z.number().positive().max(120))
+        .min(1)
+        .max(4)
+        .optional()
+        .describe("Travel times in minutes, up to four; give this or km"),
+      km: z
+        .array(z.number().positive().max(200))
+        .min(1)
+        .max(4)
+        .optional()
+        .describe("Travel distances in km, up to four; give this or minutes"),
+    },
+    outputSchema: {
+      costing: z.enum(costings),
+      origin: z.object({ lat: latitude, lon: longitude }),
+      snappedTo: z
+        .object({ lat: latitude, lon: longitude, distanceM: z.number() })
+        .describe("Where the start was placed on the road network, and how far that is from the origin"),
+      contours: z
+        .array(
+          z.object({
+            value: z.number(),
+            unit: z.enum(["minutes", "km"]),
+            geometry: z.object({
+              type: z.enum(["Polygon", "MultiPolygon"]),
+              coordinates: z.array(z.any()),
+            }),
+          })
+        )
+        .describe("Smallest first; coordinates are [lon, lat] as in GeoJSON"),
+    },
+    annotations,
+  },
+  async ({ lat, lon, costing, minutes, km }) =>
+    result(await isochrone({ lat, lon }, { costing, minutes, km }))
 );
 
 const taginfoNote =
