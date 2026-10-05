@@ -37,6 +37,7 @@ export type Route = {
     maneuvers: Maneuver[];
   }[];
   geometry?: { type: "LineString"; coordinates: [number, number][] };
+  locations: SnappedLocation[];
 };
 
 type ValhallaSummary = {
@@ -118,7 +119,12 @@ const routeRequest = (locations: Location[], { costing, language }: RouteOptions
   ...(language ? { language } : {}),
 });
 
-const toRoute = (trip: ValhallaTrip, costing: Costing, includeGeometry: boolean): Route => {
+const toRoute = (
+  trip: ValhallaTrip,
+  costing: Costing,
+  includeGeometry: boolean,
+  locations: SnappedLocation[]
+): Route => {
   const result: Route = {
     costing,
     distanceKm: trip.summary.length,
@@ -136,6 +142,7 @@ const toRoute = (trip: ValhallaTrip, costing: Costing, includeGeometry: boolean)
         ...(m.street_names?.length ? { streetNames: m.street_names } : {}),
       })),
     })),
+    locations,
   };
 
   if (includeGeometry) {
@@ -150,9 +157,12 @@ const toRoute = (trip: ValhallaTrip, costing: Costing, includeGeometry: boolean)
 
 /** A route through the locations in order. */
 export const route = async (locations: Location[], options: RouteOptions): Promise<Route> => {
-  const response = await post("Valhalla route", "route", routeRequest(locations, options));
+  const [response, snapped] = await Promise.all([
+    post("Valhalla route", "route", routeRequest(locations, options)),
+    snapAll(locations, options.costing),
+  ]);
   const { trip } = (await response.json()) as ValhallaRoute;
-  return toRoute(trip, options.costing, options.includeGeometry ?? false);
+  return toRoute(trip, options.costing, options.includeGeometry ?? false, snapped);
 };
 
 /**
@@ -164,17 +174,54 @@ export const optimizedRoute = async (
   locations: Location[],
   options: RouteOptions
 ): Promise<Route & { order: number[] }> => {
-  const response = await post("Valhalla optimized_route", "optimized_route", routeRequest(locations, options));
+  const [response, snapped] = await Promise.all([
+    post("Valhalla optimized_route", "optimized_route", routeRequest(locations, options)),
+    snapAll(locations, options.costing),
+  ]);
   const { trip } = (await response.json()) as {
     trip: ValhallaTrip & { locations: { original_index: number }[] };
   };
   return {
     order: trip.locations.map((l) => l.original_index),
-    ...toRoute(trip, options.costing, options.includeGeometry ?? false),
+    ...toRoute(trip, options.costing, options.includeGeometry ?? false, snapped),
   };
 };
 
-export type SnappedLocation = LatLon & { snappedTo: LatLon & { distanceM: number } };
+export type Snap = LatLon & { distanceM: number; roadNames: string[] };
+
+/**
+ * Where each location goes on the network for this costing: the nearest
+ * point on a road, path or ferry line, how far that is, and the names of
+ * what it is on. null where there is nothing within reach.
+ */
+export const locate = async (locations: LatLon[], costing: Costing): Promise<(Snap | null)[]> => {
+  const response = await post("Valhalla locate", "locate", {
+    locations: locations.map(({ lat, lon }) => ({ lat, lon })),
+    costing,
+    verbose: true,
+  });
+  const found = (await response.json()) as {
+    edges?: {
+      correlated_lat: number;
+      correlated_lon: number;
+      distance: number;
+      edge_info?: { names?: string[] };
+    }[];
+  }[];
+  return locations.map((location, i) => {
+    const edges = found[i]?.edges ?? [];
+    if (!edges.length) return null;
+    const nearest = edges.reduce((a, b) => (b.distance < a.distance ? b : a));
+    const point = { lat: nearest.correlated_lat, lon: nearest.correlated_lon };
+    return {
+      ...point,
+      distanceM: distanceMetres(location, point),
+      roadNames: nearest.edge_info?.names ?? [],
+    };
+  });
+};
+
+export type SnappedLocation = LatLon & { snappedTo: Snap | null };
 
 export type RouteMatrix = {
   costing: Costing;
@@ -183,15 +230,11 @@ export type RouteMatrix = {
   matrix: ({ durationSeconds: number; distanceKm: number } | null)[][];
 };
 
-const snapped = (input: LatLon, placed: LatLon): SnappedLocation => ({
-  lat: input.lat,
-  lon: input.lon,
-  snappedTo: {
-    lat: placed.lat,
-    lon: placed.lon,
-    distanceM: distanceMetres(input, placed),
-  },
-});
+/** Each location with where /locate puts it. */
+const snapAll = async (locations: LatLon[], costing: Costing): Promise<SnappedLocation[]> => {
+  const snaps = await locate(locations, costing);
+  return locations.map(({ lat, lon }, i) => ({ lat, lon, snappedTo: snaps[i] }));
+};
 
 /** Travel time and distance from every source to every target. */
 export const routeMatrix = async (
@@ -200,21 +243,22 @@ export const routeMatrix = async (
   { costing }: { costing: Costing }
 ): Promise<RouteMatrix> => {
   const plain = (l: LatLon) => ({ lat: l.lat, lon: l.lon });
-  const response = await post("Valhalla sources_to_targets", "sources_to_targets", {
-    sources: sources.map(plain),
-    targets: targets.map(plain),
-    costing,
-    units: "kilometers",
-  });
+  const [response, snapped] = await Promise.all([
+    post("Valhalla sources_to_targets", "sources_to_targets", {
+      sources: sources.map(plain),
+      targets: targets.map(plain),
+      costing,
+      units: "kilometers",
+    }),
+    snapAll([...sources, ...targets], costing),
+  ]);
   const data = (await response.json()) as {
-    sources: LatLon[];
-    targets: LatLon[];
     sources_to_targets: { time: number | null; distance: number | null }[][];
   };
   return {
     costing,
-    sources: sources.map((s, i) => snapped(s, data.sources[i])),
-    targets: targets.map((t, i) => snapped(t, data.targets[i])),
+    sources: snapped.slice(0, sources.length),
+    targets: snapped.slice(sources.length),
     matrix: data.sources_to_targets.map((row) =>
       row.map((cell) =>
         cell.time === null || cell.distance === null

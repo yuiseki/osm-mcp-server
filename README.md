@@ -10,13 +10,15 @@ An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use Op
 | `osm_reverse_geocoding` | Nominatim | Finds the place and the address at a coordinate. |
 | `osm_overpass_query` | Overpass API | Runs an Overpass QL query and returns the matching elements (default 100, up to 1000), the total count, and when the data was last updated. |
 | `osm_search_nearby` | Overpass API | Finds features with given tags around a point, nearest first, without writing Overpass QL (e.g. `amenity=restaurant` and `cuisine=ramen` within 500 m). Can also filter by name or brand in any language. |
-| `osm_routing` | Valhalla | Plans a route through 2 to 20 locations by car, on foot, by bicycle and more. Returns the distance, the travel time and turn-by-turn directions, and the route line on request. |
-| `osm_optimized_route` | Valhalla | Finds the quickest order to visit 3 to 20 locations, keeping the first and the last, and returns that route with the visiting order. |
-| `osm_route_matrix` | Valhalla | Travel time and distance from every source to every target (up to 25 each), with where each location was placed on the road network. |
+| `osm_routing` | Valhalla | Plans a route through 2 to 20 locations by car, on foot, by bicycle and more. Returns the distance, the travel time, turn-by-turn directions, where each location was placed on the road network, and the route line on request. |
+| `osm_optimized_route` | Valhalla | Finds the quickest order to visit 3 to 20 locations, keeping the first and the last, and returns that route with the visiting order and where each location was placed. |
+| `osm_route_matrix` | Valhalla | Travel time and distance from every source to every target (up to 25 each), with where each location was placed on the road network and the name of the road it is on. |
 | `osm_isochrone` | Valhalla | Returns the area reachable from a point within up to four travel times or distances as GeoJSON polygons, and where the start was placed on the road network. |
 | `osm_taginfo_keys` | taginfo | Finds tag keys whose name contains a word, most used first. |
 | `osm_taginfo_values` | taginfo | Lists the values used with a key, most used first, optionally only those containing a word (e.g. `cuisine` values with `ramen`). |
 | `osm_taginfo_tag` | taginfo | Describes a tag or a key: how often it is used on nodes, ways and relations, its OSM wiki description in English and one more language, and the tags most often used with it. |
+
+The Valhalla tools move each location onto the nearest road, path or ferry line that the chosen way of travel can use, and say where that is, how far it moved, and the name of what it landed on. Check this when a result looks wrong: a point in Tokyo Bay lands on a ferry line 3.3 km away, and walking there comes out at over 2000 km because it goes by ferry to Kyushu and back.
 
 All tools are read-only. Each returns structured content with an output schema, and the same JSON as text for clients that do not read structured content. Errors from the services, such as an Overpass parse error or a place Valhalla cannot reach, come back as tool errors with the service's own message, so the assistant can correct the request.
 

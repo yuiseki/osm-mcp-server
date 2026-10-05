@@ -175,4 +175,17 @@ describe.concurrent("live", { timeout: 60_000 }, () => {
     expect([...result.order].sort()).toEqual([0, 1, 2, 3, 4]);
     expect(result.legs).toHaveLength(4);
   });
+
+  // A point in Tokyo Bay lands on a ferry line, so the walk there goes by
+  // ferry to Kyushu and back; the route should say so.
+  it("explains a walk to a point in Tokyo Bay", async () => {
+    const result = await call("osm_routing", {
+      locations: [tokyoTower, { lat: 35.55, lon: 139.9 }],
+      costing: "pedestrian",
+    });
+    const [start, end] = result.locations;
+    expect(start.snappedTo.distanceM).toBeLessThan(100);
+    expect(end.snappedTo.distanceM).toBeGreaterThan(1000);
+    expect(end.snappedTo.roadNames.join(" ")).toMatch(/Ferry|フェリー/);
+  });
 });

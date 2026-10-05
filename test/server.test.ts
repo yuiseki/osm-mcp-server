@@ -32,12 +32,27 @@ afterAll(async () => {
   await stub?.close();
 });
 
+// Valhalla's /locate, putting every location on the spot on a road named
+// after its index.
+const locateOnTheSpot = (req: { body: string }) => ({
+  body: (JSON.parse(req.body).locations as { lat: number; lon: number }[]).map(({ lat, lon }, i) => ({
+    edges: [{ correlated_lat: lat, correlated_lon: lon, distance: 0, edge_info: { names: [`road ${i}`] } }],
+  })),
+});
+
 beforeEach(() => {
   stub.routes.clear();
   stub.requests.length = 0;
+  stub.routes.set("/valhalla/locate", locateOnTheSpot);
 });
 
 type Text = { type: string; text: string };
+
+const requestTo = (path: string) => {
+  const req = stub.requests.find((r) => r.path === path);
+  if (!req) throw new Error(`no request to ${path}`);
+  return req;
+};
 
 const call = async (name: string, args: Record<string, unknown>) => {
   const result = await client.callTool({ name, arguments: args });
@@ -275,13 +290,14 @@ describe("osm_routing", () => {
     expect(result).toMatchObject({ costing: "pedestrian", distanceKm: 3.801, durationSeconds: 2744 });
     expect(result.legs[0].maneuvers[0].instruction).toBe("Walk northeast on the walkway.");
     expect(result.geometry).toBeUndefined();
-    expect(JSON.parse(stub.requests[0].body)).toMatchObject({ costing: "pedestrian", language: "ja-JP" });
+    expect(JSON.parse(requestTo("/valhalla/route").body)).toMatchObject({ costing: "pedestrian", language: "ja-JP" });
+    expect(result.locations[1]).toEqual({ ...locations[1], snappedTo: { ...locations[1], distanceM: 0, roadNames: ["road 1"] } });
   });
 
   it("drives by default", async () => {
     stub.routes.set("/valhalla/route", () => ({ body: tokyoWalk }));
     await structured("osm_routing", { locations });
-    expect(JSON.parse(stub.requests[0].body).costing).toBe("auto");
+    expect(JSON.parse(requestTo("/valhalla/route").body).costing).toBe("auto");
   });
 
   it("returns the line on request", async () => {
@@ -463,13 +479,13 @@ describe("osm_route_matrix and osm_optimized_route", () => {
       costing: "pedestrian",
     });
     expect(result.matrix[0][0]).toEqual({ durationSeconds: 2743, distanceKm: 3.801 });
-    expect(result.targets[2].snappedTo.distanceM).toBeGreaterThan(3000);
+    expect(result.targets[2].snappedTo.roadNames).toEqual(["road 4"]);
   });
 
   it("osm_route_matrix drives by default", async () => {
     stub.routes.set("/valhalla/sources_to_targets", () => ({ body: fixture("matrix-walk-2x3") }));
     await structured("osm_route_matrix", { sources: [tower, station], targets: [station, shibuya, bay] });
-    expect(JSON.parse(stub.requests[0].body).costing).toBe("auto");
+    expect(JSON.parse(requestTo("/valhalla/sources_to_targets").body).costing).toBe("auto");
   });
 
   it("osm_route_matrix reports an empty list as a tool error", async () => {

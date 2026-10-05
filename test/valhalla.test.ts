@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { userAgent } from "../src/lib/config.js";
 import { jsonErrorDetail } from "../src/lib/http.js";
 import { decodePolyline6, route } from "../src/lib/valhalla.js";
-import { mockFetch, requestOf } from "./helpers.js";
+import { locateOnTheSpot, mockFetch, mockFetchByPath, requestOf, requestTo } from "./helpers.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -61,11 +61,30 @@ describe("jsonErrorDetail", () => {
   });
 });
 
+// Valhalla answering /route with trip and /locate with every location on
+// the spot.
+const mockValhalla = (trip: unknown) =>
+  mockFetchByPath({ "/route": trip, "/locate": locateOnTheSpot });
+
 describe("route", () => {
+  it("says where each location was placed on the network", async () => {
+    const fetchMock = mockValhalla(tokyoWalk);
+    const result = await route(towerToStation, { costing: "pedestrian" });
+    expect(result.locations).toEqual([
+      { ...towerToStation[0], snappedTo: { ...towerToStation[0], distanceM: 0, roadNames: ["road 0"] } },
+      { ...towerToStation[1], snappedTo: { ...towerToStation[1], distanceM: 0, roadNames: ["road 1"] } },
+    ]);
+    expect(JSON.parse(String(requestTo(fetchMock, "/locate").body))).toEqual({
+      locations: towerToStation,
+      costing: "pedestrian",
+      verbose: true,
+    });
+  });
+
   it("posts the locations, costing and language", async () => {
-    const fetchMock = mockFetch(tokyoWalk);
+    const fetchMock = mockValhalla(tokyoWalk);
     await route(towerToStation, { costing: "pedestrian", language: "ja-JP" });
-    const { url, method, headers, body } = requestOf(fetchMock);
+    const { url, method, headers, body } = requestTo(fetchMock, "/route");
     expect(url.href).toBe("https://valhalla1.openstreetmap.de/route");
     expect(method).toBe("POST");
     expect(headers.get("User-Agent")).toBe(userAgent);
@@ -79,7 +98,7 @@ describe("route", () => {
   });
 
   it("summarises the trip and its maneuvers", async () => {
-    mockFetch(tokyoWalk);
+    mockValhalla(tokyoWalk);
     const result = await route(towerToStation, { costing: "pedestrian" });
     expect(result).toMatchObject({
       costing: "pedestrian",
@@ -102,7 +121,7 @@ describe("route", () => {
   it("keeps street names when Valhalla gives them", async () => {
     const withStreet = structuredClone(tokyoWalk);
     withStreet.trip.legs[0].maneuvers[1].street_names = ["東京タワー通り"];
-    mockFetch(withStreet);
+    mockValhalla(withStreet);
     const result = await route(towerToStation, { costing: "pedestrian" });
     expect(result.legs[0].maneuvers[1].streetNames).toEqual(["東京タワー通り"]);
   });
@@ -110,7 +129,7 @@ describe("route", () => {
   it("joins the legs into one GeoJSON line on request", async () => {
     const twoLegs = structuredClone(tokyoWalk);
     twoLegs.trip.legs.push({ ...twoLegs.trip.legs[0], shape: "oam_cA_ukpiGg@Y" });
-    mockFetch(twoLegs);
+    mockValhalla(twoLegs);
     const result = await route(towerToStation, { costing: "pedestrian", includeGeometry: true });
     expect(result.geometry?.type).toBe("LineString");
     // The second leg starts where the first ends, so its first point is
@@ -119,10 +138,14 @@ describe("route", () => {
   });
 
   it("puts Valhalla's error in the thrown error", async () => {
-    mockFetch(
-      { error_code: 171, error: "No suitable edges near location", status_code: 400 },
-      { status: 400, statusText: "Bad Request" }
-    );
+    mockFetchByPath({
+      "/route": () => ({
+        status: 400,
+        statusText: "Bad Request",
+        body: { error_code: 171, error: "No suitable edges near location", status_code: 400 },
+      }),
+      "/locate": locateOnTheSpot,
+    });
     await expect(route(towerToStation, { costing: "auto" })).rejects.toThrow(
       "Valhalla route failed: 400 Bad Request\nNo suitable edges near location (error_code 171)"
     );
@@ -130,8 +153,9 @@ describe("route", () => {
 
   it("uses VALHALLA_URL", async () => {
     vi.stubEnv("VALHALLA_URL", "https://valhalla.example.org/");
-    const fetchMock = mockFetch(tokyoWalk);
+    const fetchMock = mockValhalla(tokyoWalk);
     await route(towerToStation, { costing: "auto" });
-    expect(requestOf(fetchMock).url.href).toBe("https://valhalla.example.org/route");
+    expect(requestTo(fetchMock, "/route").url.href).toBe("https://valhalla.example.org/route");
+    expect(requestTo(fetchMock, "/locate").url.href).toBe("https://valhalla.example.org/locate");
   });
 });
