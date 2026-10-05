@@ -8,7 +8,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { version } from "./lib/config.js";
-import { geocodeNominatim, reverseGeocodeNominatim } from "./lib/nominatim.js";
+import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
+import { language, latitude, longitude, place } from "./lib/schemas.js";
 
 const server = new McpServer({
   name: "osm-mcp-server",
@@ -18,29 +19,41 @@ const server = new McpServer({
 // Every tool only reads from external OpenStreetMap services.
 const annotations = { readOnlyHint: true, openWorldHint: true };
 
+// structuredContent for clients that read it, and the same as JSON text for
+// those that do not.
+const result = <T extends Record<string, unknown>>(value: T) => ({
+  structuredContent: value,
+  content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
+});
+
 server.registerTool(
   "osm_geocoding",
   {
     title: "Geocode",
-    description: "Geocoding tool that uses the OpenStreetMap Nominatim API.",
+    description:
+      "Find places by name or address with OpenStreetMap Nominatim. Returns several candidates, best match first, because names are often ambiguous; check displayName to pick the right one, or narrow the search with countrycodes.",
     inputSchema: {
-      text: z
-        .string()
-        .describe("The text to geocode (Address or place name)"),
+      text: z.string().min(1).describe("The text to geocode (Address or place name)"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(20)
+        .default(5)
+        .describe("Maximum number of candidates"),
+      countrycodes: z
+        .array(z.string().length(2))
+        .optional()
+        .describe("Only return places in these countries (ISO 3166-1 alpha-2, e.g. ['jp'])"),
+      language,
     },
+    outputSchema: { results: z.array(place) },
     annotations,
   },
-  async ({ text }) => {
-    const { lat, lon } = await geocodeNominatim(text);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `The geocoded location is at latitude ${lat} and longitude ${lon}.`,
-        },
-      ],
-    };
-  }
+  async ({ text, limit, countrycodes, language }) =>
+    result({
+      results: await searchPlaces(text, { limit, countryCodes: countrycodes, language }),
+    })
 );
 
 server.registerTool(
@@ -48,19 +61,21 @@ server.registerTool(
   {
     title: "Reverse geocode",
     description:
-      "Reverse geocoding tool that uses the OpenStreetMap Nominatim API.",
+      "Find the place and address at a coordinate with OpenStreetMap Nominatim.",
     inputSchema: {
-      lat: z.number().describe("Latitude of the location to reverse geocode"),
-      lon: z.number().describe("Longitude of the location to reverse geocode"),
+      lat: latitude.describe("Latitude of the location to reverse geocode"),
+      lon: longitude.describe("Longitude of the location to reverse geocode"),
+      language,
     },
+    outputSchema: place.extend({
+      address: z
+        .record(z.string(), z.string())
+        .describe("Address parts, e.g. road, city, postcode, country_code"),
+    }).shape,
     annotations,
   },
-  async ({ lat, lon }) => {
-    const { displayName } = await reverseGeocodeNominatim(lat, lon);
-    return {
-      content: [{ type: "text", text: displayName }],
-    };
-  }
+  async ({ lat, lon, language }) =>
+    result(await reverseGeocode(lat, lon, { language }))
 );
 
 /**
