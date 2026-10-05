@@ -4,119 +4,64 @@
  * This is a MCP server that provides API access to the OpenStreetMap APIs.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { version } from "./lib/config.js";
 import { geocodeNominatim, reverseGeocodeNominatim } from "./lib/nominatim.js";
 
-const server = new Server(
+const server = new McpServer({
+  name: "osm-mcp-server",
+  version,
+});
+
+// Every tool only reads from external OpenStreetMap services.
+const annotations = { readOnlyHint: true, openWorldHint: true };
+
+server.registerTool(
+  "osm_geocoding",
   {
-    name: "osm-mcp-server",
-    version,
-  },
-  {
-    capabilities: {
-      resources: {},
-      tools: {},
+    title: "Geocode",
+    description: "Geocoding tool that uses the OpenStreetMap Nominatim API.",
+    inputSchema: {
+      text: z
+        .string()
+        .describe("The text to geocode (Address or place name)"),
     },
+    annotations,
+  },
+  async ({ text }) => {
+    const { lat, lon } = await geocodeNominatim(text);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `The geocoded location is at latitude ${lat} and longitude ${lon}.`,
+        },
+      ],
+    };
   }
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: "osm_geocoding",
-        description:
-          "Geocoding tool that uses the OpenStreetMap Nominatim API.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            text: {
-              type: "string",
-              description: "The text to geocode (Address or place name)",
-            },
-          },
-          required: ["text"],
-        },
-      },
-      {
-        name: "osm_reverse_geocoding",
-        description:
-          "Reverse geocoding tool that uses the OpenStreetMap Nominatim API.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            lat: {
-              type: "number",
-              description: "Latitude of the location to reverse geocode",
-            },
-            lon: {
-              type: "number",
-              description: "Longitude of the location to reverse geocode",
-            },
-          },
-          required: ["lat", "lon"],
-        },
-      },
-    ],
-  };
-});
-
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  switch (request.params.name) {
-    case "osm_geocoding": {
-      if (
-        !request.params.arguments ||
-        typeof request.params.arguments.text !== "string"
-      ) {
-        throw new Error(
-          "Invalid arguments: 'text' is required and must be a string."
-        );
-      }
-
-      const text = request.params.arguments.text;
-      const { lat, lon } = await geocodeNominatim(text);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `The geocoded location is at latitude ${lat} and longitude ${lon}.`,
-          },
-        ],
-      };
-    }
-    case "osm_reverse_geocoding": {
-      if (
-        !request.params.arguments ||
-        typeof request.params.arguments.lat !== "number" ||
-        typeof request.params.arguments.lon !== "number"
-      ) {
-        throw new Error(
-          "Invalid arguments: 'lat' and 'lon' are required and must be numbers."
-        );
-      }
-
-      const { lat, lon } = request.params.arguments;
-      const { displayName } = await reverseGeocodeNominatim(lat, lon);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: displayName,
-          },
-        ],
-      };
-    }
-    default:
-      throw new Error(`Unknown tool: ${request.params.name}`);
+server.registerTool(
+  "osm_reverse_geocoding",
+  {
+    title: "Reverse geocode",
+    description:
+      "Reverse geocoding tool that uses the OpenStreetMap Nominatim API.",
+    inputSchema: {
+      lat: z.number().describe("Latitude of the location to reverse geocode"),
+      lon: z.number().describe("Longitude of the location to reverse geocode"),
+    },
+    annotations,
+  },
+  async ({ lat, lon }) => {
+    const { displayName } = await reverseGeocodeNominatim(lat, lon);
+    return {
+      content: [{ type: "text", text: displayName }],
+    };
   }
-});
+);
 
 /**
  * Start the server using stdio transport.

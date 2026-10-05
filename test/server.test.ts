@@ -37,24 +37,33 @@ describe("osm-mcp-server over stdio", () => {
     expect(reverse?.inputSchema.required).toEqual(["lat", "lon"]);
   });
 
-  it("rejects osm_geocoding without text", async () => {
-    await expect(
-      client.callTool({ name: "osm_geocoding", arguments: {} })
-    ).rejects.toThrow("'text' is required");
+  // Tool errors come back as results with isError, so the model can read
+  // them and retry, rather than as protocol errors.
+  const errorText = async (name: string, args: Record<string, unknown>) => {
+    const result = await client.callTool({ name, arguments: args });
+    expect(result.isError).toBe(true);
+    const [content] = result.content as { type: string; text: string }[];
+    return content.text;
+  };
+
+  it("reports osm_geocoding without text as a tool error", async () => {
+    expect(await errorText("osm_geocoding", {})).toMatch(/text/);
   });
 
-  it("rejects osm_reverse_geocoding with non-numeric coordinates", async () => {
-    await expect(
-      client.callTool({
-        name: "osm_reverse_geocoding",
-        arguments: { lat: "35.6", lon: 139.7 },
-      })
-    ).rejects.toThrow("'lat' and 'lon' are required");
+  it("reports non-numeric coordinates as a tool error", async () => {
+    expect(
+      await errorText("osm_reverse_geocoding", { lat: "35.6", lon: 139.7 })
+    ).toMatch(/lat/);
   });
 
-  it("rejects an unknown tool", async () => {
-    await expect(
-      client.callTool({ name: "no_such_tool", arguments: {} })
-    ).rejects.toThrow("Unknown tool: no_such_tool");
+  it("reports an unknown tool as a tool error", async () => {
+    expect(await errorText("no_such_tool", {})).toMatch(/no_such_tool not found/);
+  });
+
+  it("marks every tool as read-only", async () => {
+    const { tools } = await client.listTools();
+    for (const tool of tools) {
+      expect(tool.annotations?.readOnlyHint, tool.name).toBe(true);
+    }
   });
 });

@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@birchill/tiny-segmenter": "^1.0.0",
-    "@modelcontextprotocol/sdk": "1.32.0"
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
