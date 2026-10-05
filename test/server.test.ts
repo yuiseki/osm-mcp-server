@@ -83,6 +83,7 @@ describe("osm-mcp-server over stdio", () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       "osm_geocoding",
+      "osm_isochrone",
       "osm_overpass_query",
       "osm_reverse_geocoding",
       "osm_routing",
@@ -407,5 +408,38 @@ describe("osm_search_nearby", () => {
     expect(
       await errorText("osm_search_nearby", { lat: 35.6, lon: 139.7, radius_m: 20000, tags: [{ key: "shop" }] })
     ).toMatch(/radius_m/);
+  });
+});
+
+describe("osm_isochrone", () => {
+  const fixture = (name: string) =>
+    JSON.parse(readFileSync(new URL(`./fixtures/valhalla-isochrone-${name}.json`, import.meta.url), "utf8"));
+
+  it("returns the reachable areas", async () => {
+    stub.routes.set("/valhalla/isochrone", () => ({ body: fixture("tokyo-tower-walk-10-20") }));
+    const result = await structured("osm_isochrone", {
+      lat: 35.6586,
+      lon: 139.7454,
+      costing: "pedestrian",
+      minutes: [10, 20],
+    });
+    expect(result.contours.map((c: { value: number }) => c.value)).toEqual([10, 20]);
+    expect(result.snappedTo.distanceM).toBe(30);
+    expect(JSON.parse(stub.requests[0].body).contours).toEqual([{ time: 10 }, { time: 20 }]);
+  });
+
+  it("reports a point with no road as a tool error", async () => {
+    stub.routes.set("/valhalla/isochrone", () => ({ body: fixture("pacific-no-road") }));
+    expect(await errorText("osm_isochrone", { lat: 30, lon: -140, minutes: [10] })).toMatch(/No road or path/);
+  });
+
+  it("reports neither minutes nor km as a tool error", async () => {
+    expect(await errorText("osm_isochrone", { lat: 35.6, lon: 139.7 })).toMatch(/minutes or km/);
+  });
+
+  it("reports more than four contours as a tool error", async () => {
+    expect(
+      await errorText("osm_isochrone", { lat: 35.6, lon: 139.7, minutes: [5, 10, 15, 20, 25] })
+    ).toMatch(/minutes/);
   });
 });

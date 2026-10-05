@@ -1,3 +1,4 @@
+import { distanceMetres } from "./geo.js";
 import { runOverpass, type OverpassElement } from "./overpass.js";
 
 export type TagFilter = { key: string; value?: string | string[] };
@@ -54,20 +55,6 @@ export const buildNearbyQuery = ({ lat, lon, radiusM, tags, name }: NearbyOption
   (name ? `[~${quote(nameKeys)}~${quote(escapeRegex(name))},i]` : "") +
   "->.r;.r out count;" +
   `.r out center tags ${fetchCap};`;
-
-/** Great-circle distance in metres, rounded. */
-export const distanceMetres = (
-  a: { lat: number; lon: number },
-  b: { lat: number; lon: number }
-) => {
-  const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLon = (b.lon - a.lon) * rad;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
-  return Math.round(2 * 6371008.8 * Math.asin(Math.sqrt(h)));
-};
 
 type Located = OverpassElement & {
   lat?: number;

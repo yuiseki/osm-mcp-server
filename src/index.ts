@@ -12,7 +12,7 @@ import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
 import { searchNearby } from "./lib/nearby.js";
 import { runOverpass } from "./lib/overpass.js";
 import { describeTag, keyValues, searchKeys } from "./lib/taginfo.js";
-import { costings, route } from "./lib/valhalla.js";
+import { costings, isochrone, route } from "./lib/valhalla.js";
 import { language, latitude, longitude, place } from "./lib/schemas.js";
 
 const server = new McpServer({
@@ -237,6 +237,54 @@ server.registerTool(
   },
   async ({ locations, costing, language, include_geometry }) =>
     result(await route(locations, { costing, language, includeGeometry: include_geometry }))
+);
+
+server.registerTool(
+  "osm_isochrone",
+  {
+    title: "Isochrone",
+    description:
+      "Find the area reachable from a point within given travel times or distances, with Valhalla on OpenStreetMap roads and paths, e.g. everywhere within a 15 minute walk. Returns one GeoJSON polygon per time or distance. Check snappedTo: it is where the start was moved onto the network, and a large distanceM means the start is far from any road or path.",
+    inputSchema: {
+      lat: latitude.describe("Latitude of the start"),
+      lon: longitude.describe("Longitude of the start"),
+      costing: z.enum(costings).default("auto").describe("How to travel: auto (car), pedestrian, bicycle, ..."),
+      minutes: z
+        .array(z.number().positive().max(120))
+        .min(1)
+        .max(4)
+        .optional()
+        .describe("Travel times in minutes, up to four; give this or km"),
+      km: z
+        .array(z.number().positive().max(200))
+        .min(1)
+        .max(4)
+        .optional()
+        .describe("Travel distances in km, up to four; give this or minutes"),
+    },
+    outputSchema: {
+      costing: z.enum(costings),
+      origin: z.object({ lat: latitude, lon: longitude }),
+      snappedTo: z
+        .object({ lat: latitude, lon: longitude, distanceM: z.number() })
+        .describe("Where the start was placed on the road network, and how far that is from the origin"),
+      contours: z
+        .array(
+          z.object({
+            value: z.number(),
+            unit: z.enum(["minutes", "km"]),
+            geometry: z.object({
+              type: z.enum(["Polygon", "MultiPolygon"]),
+              coordinates: z.array(z.any()),
+            }),
+          })
+        )
+        .describe("Smallest first; coordinates are [lon, lat] as in GeoJSON"),
+    },
+    annotations,
+  },
+  async ({ lat, lon, costing, minutes, km }) =>
+    result(await isochrone({ lat, lon }, { costing, minutes, km }))
 );
 
 const taginfoNote =

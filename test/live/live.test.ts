@@ -137,4 +137,19 @@ describe.concurrent("live", { timeout: 60_000 }, () => {
     });
     expect(result.total).toBeGreaterThan(0);
   });
+
+  it("finds the area within a 15 minute walk of Tokyo Tower", async () => {
+    const result = await call("osm_isochrone", { ...tokyoTower, costing: "pedestrian", minutes: [15] });
+    expect(result.snappedTo.distanceM).toBeLessThan(100);
+    expect(result.contours).toHaveLength(1);
+    expect(result.contours[0].geometry.coordinates[0].length).toBeGreaterThan(6);
+  });
+
+  it("reports a start with no road nearby", async () => {
+    const result = await client.callTool({
+      name: "osm_isochrone",
+      arguments: { lat: 30, lon: -140, minutes: [10] },
+    });
+    expect(result.isError).toBe(true);
+  });
 });

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildNearbyQuery, distanceMetres, searchNearby } from "../src/lib/nearby.js";
+import { distanceMetres } from "../src/lib/geo.js";
+import { buildNearbyQuery, searchNearby } from "../src/lib/nearby.js";
 import { mockFetch, requestOf } from "./helpers.js";
 
 afterEach(() => {
