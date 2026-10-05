@@ -112,4 +112,29 @@ describe.concurrent("live", { timeout: 60_000 }, () => {
     expect(tag.wiki.map((w: { lang: string }) => w.lang)).toEqual(["en", "ja"]);
     expect(tag.combinations.length).toBeGreaterThan(0);
   });
+
+  it("finds ramen shops near Tokyo Tower, nearest first", async () => {
+    const result = await call("osm_search_nearby", {
+      ...tokyoTower,
+      radius_m: 1000,
+      tags: [
+        { key: "amenity", value: "restaurant" },
+        { key: "cuisine", value: "ramen" },
+      ],
+    });
+    expect(result.total).toBeGreaterThan(0);
+    const distances = result.results.map((r: { distanceM: number }) => r.distanceM);
+    expect(distances).toEqual([...distances].sort((a, b) => a - b));
+    expect(distances.at(-1)).toBeLessThanOrEqual(1100);
+  });
+
+  it("finds a chain by its English brand name", async () => {
+    const result = await call("osm_search_nearby", {
+      ...tokyoStation,
+      radius_m: 800,
+      tags: [{ key: "amenity", value: "cafe" }],
+      name: "starbucks",
+    });
+    expect(result.total).toBeGreaterThan(0);
+  });
 });

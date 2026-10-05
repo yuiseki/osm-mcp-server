@@ -86,6 +86,7 @@ describe("osm-mcp-server over stdio", () => {
       "osm_overpass_query",
       "osm_reverse_geocoding",
       "osm_routing",
+      "osm_search_nearby",
       "osm_taginfo_keys",
       "osm_taginfo_tag",
       "osm_taginfo_values",
@@ -355,5 +356,56 @@ describe("taginfo tools", () => {
 
   it("reports an empty key as a tool error", async () => {
     expect(await errorText("osm_taginfo_values", { key: "" })).toMatch(/key/);
+  });
+});
+
+describe("osm_search_nearby", () => {
+  const answer = (elements: unknown[]) => ({
+    body: {
+      osm3s: { timestamp_osm_base: "2025-09-14T23:59:55Z" },
+      elements: [
+        { type: "count", id: 0, tags: { total: String(elements.length) } },
+        ...elements,
+      ],
+    },
+  });
+  const near = { type: "node", id: 2, lat: 35.6587, lon: 139.7455, tags: { amenity: "cafe", name: "Near" } };
+  const far = { type: "node", id: 1, lat: 35.661, lon: 139.743, tags: { amenity: "cafe" } };
+
+  it("returns places nearest first", async () => {
+    stub.routes.set("/overpass/api/interpreter", () => answer([far, near]));
+    const result = await structured("osm_search_nearby", {
+      lat: 35.6586,
+      lon: 139.7454,
+      tags: [{ key: "amenity", value: "cafe" }],
+    });
+    expect(result.results.map((r: { osmId: number }) => r.osmId)).toEqual([2, 1]);
+    expect(result.results[0]).toMatchObject({ name: "Near", distanceM: 14 });
+    const query = new URLSearchParams(stub.requests[0].body).get("data");
+    expect(query).toContain('nwr(around:500,35.6586,139.7454)["amenity"="cafe"]');
+  });
+
+  it("passes radius, several values and name through", async () => {
+    stub.routes.set("/overpass/api/interpreter", () => answer([]));
+    await structured("osm_search_nearby", {
+      lat: 35.6586,
+      lon: 139.7454,
+      radius_m: 1000,
+      tags: [{ key: "amenity", value: ["cafe", "restaurant"] }],
+      name: "Doutor",
+    });
+    const query = new URLSearchParams(stub.requests[0].body).get("data");
+    expect(query).toContain('around:1000,');
+    expect(query).toContain('["amenity"~"^(cafe|restaurant)$"][~"^(name|brand)(:.*)?$"~"Doutor",i]');
+  });
+
+  it("reports a search without tags as a tool error", async () => {
+    expect(await errorText("osm_search_nearby", { lat: 35.6, lon: 139.7, tags: [] })).toMatch(/tags/);
+  });
+
+  it("reports a radius over 10 km as a tool error", async () => {
+    expect(
+      await errorText("osm_search_nearby", { lat: 35.6, lon: 139.7, radius_m: 20000, tags: [{ key: "shop" }] })
+    ).toMatch(/radius_m/);
   });
 });
