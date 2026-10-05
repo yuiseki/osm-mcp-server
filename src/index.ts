@@ -1,4 +1,4 @@
-#!/user/bin/env node
+#!/usr/bin/env node
 
 /**
  * This is a MCP server that provides API access to the OpenStreetMap APIs.
