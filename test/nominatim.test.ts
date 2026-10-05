@@ -3,6 +3,7 @@ import {
   geocodeNominatim,
   reverseGeocodeNominatim,
 } from "../src/lib/nominatim.js";
+import { userAgent } from "../src/lib/config.js";
 
 const mockFetch = (body: unknown, init: { status?: number; statusText?: string } = {}) => {
   const fetchMock = vi.fn(async () =>
@@ -22,6 +23,20 @@ const requestOf = (fetchMock: ReturnType<typeof mockFetch>) => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+describe("NOMINATIM_URL", () => {
+  it("points both requests at a self-hosted Nominatim", async () => {
+    vi.stubEnv("NOMINATIM_URL", "https://nominatim.example.org/");
+    const search = mockFetch([{ lat: "0", lon: "0" }]);
+    await geocodeNominatim("Tokyo Tower");
+    expect(requestOf(search).url.href).toMatch(/^https:\/\/nominatim\.example\.org\/search\?/);
+
+    const reverse = mockFetch({ display_name: "x", address: {} });
+    await reverseGeocodeNominatim(0, 0);
+    expect(requestOf(reverse).url.href).toMatch(/^https:\/\/nominatim\.example\.org\/reverse\?/);
+  });
 });
 
 describe("geocodeNominatim", () => {
@@ -48,7 +63,7 @@ describe("geocodeNominatim", () => {
   it("sends an identifying User-Agent", async () => {
     const fetchMock = mockFetch([{ lat: "0", lon: "0" }]);
     await geocodeNominatim("Tokyo Tower");
-    expect(requestOf(fetchMock).headers.get("User-Agent")).toMatch(/^osm-mcp-server\//);
+    expect(requestOf(fetchMock).headers.get("User-Agent")).toBe(userAgent);
   });
 
   it("throws when nothing is found", async () => {
@@ -87,7 +102,7 @@ describe("reverseGeocodeNominatim", () => {
   it("sends an identifying User-Agent", async () => {
     const fetchMock = mockFetch({ display_name: "x", address: {} });
     await reverseGeocodeNominatim(0, 0);
-    expect(requestOf(fetchMock).headers.get("User-Agent")).toMatch(/^osm-mcp-server\//);
+    expect(requestOf(fetchMock).headers.get("User-Agent")).toBe(userAgent);
   });
 
   it("throws when no address is returned", async () => {

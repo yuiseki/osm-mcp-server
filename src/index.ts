@@ -10,12 +10,13 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { version } from "./lib/config.js";
 import { geocodeNominatim, reverseGeocodeNominatim } from "./lib/nominatim.js";
 
 const server = new Server(
   {
     name: "osm-mcp-server",
-    version: "0.1.0",
+    version,
   },
   {
     capabilities: {
