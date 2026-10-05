@@ -10,6 +10,7 @@ import { z } from "zod";
 import { version } from "./lib/config.js";
 import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
 import { runOverpass } from "./lib/overpass.js";
+import { costings, route } from "./lib/valhalla.js";
 import { language, latitude, longitude, place } from "./lib/schemas.js";
 
 const server = new McpServer({
@@ -117,6 +118,67 @@ server.registerTool(
   },
   async ({ query, max_elements }) =>
     result(await runOverpass(query, { maxElements: max_elements }))
+);
+
+server.registerTool(
+  "osm_routing",
+  {
+    title: "Route",
+    description:
+      "Find a route through two or more locations in order with Valhalla, using OpenStreetMap roads and paths. Returns the distance, the travel time and turn-by-turn directions. Use osm_geocoding first to turn place names into coordinates.",
+    inputSchema: {
+      locations: z
+        .array(z.object({ lat: latitude, lon: longitude }))
+        .min(2)
+        .max(20)
+        .describe("Start, optional stops, and destination, in order"),
+      costing: z
+        .enum(costings)
+        .default("auto")
+        .describe("How to travel: auto (car), pedestrian, bicycle, ..."),
+      language: z
+        .string()
+        .optional()
+        .describe("Language of the directions, e.g. en-US or ja-JP"),
+      include_geometry: z
+        .boolean()
+        .default(false)
+        .describe("Also return the route line as a GeoJSON LineString ([lon, lat] pairs); it can be long"),
+    },
+    outputSchema: {
+      costing: z.enum(costings),
+      distanceKm: z.number(),
+      durationSeconds: z.number(),
+      hasToll: z.boolean(),
+      hasHighway: z.boolean(),
+      hasFerry: z.boolean(),
+      legs: z
+        .array(
+          z.object({
+            distanceKm: z.number(),
+            durationSeconds: z.number(),
+            maneuvers: z.array(
+              z.object({
+                instruction: z.string(),
+                distanceKm: z.number(),
+                durationSeconds: z.number(),
+                streetNames: z.array(z.string()).optional(),
+              })
+            ),
+          })
+        )
+        .describe("One leg between each pair of consecutive locations"),
+      geometry: z
+        .object({
+          type: z.literal("LineString"),
+          coordinates: z.array(z.tuple([z.number(), z.number()])),
+        })
+        .optional(),
+    },
+    annotations,
+  },
+  async ({ locations, costing, language, include_geometry }) =>
+    result(await route(locations, { costing, language, includeGeometry: include_geometry }))
 );
 
 /**

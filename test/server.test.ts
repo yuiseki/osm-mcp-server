@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -85,6 +85,7 @@ describe("osm-mcp-server over stdio", () => {
       "osm_geocoding",
       "osm_overpass_query",
       "osm_reverse_geocoding",
+      "osm_routing",
     ]);
   });
 
@@ -246,5 +247,57 @@ describe("osm_overpass_query", () => {
       body: { elements: [], remark: "runtime error: Query timed out in \"query\" at line 1 after 2 seconds." },
     }));
     expect(await errorText("osm_overpass_query", { query: "nwr;out;" })).toMatch(/timed out/);
+  });
+});
+
+describe("osm_routing", () => {
+  const tokyoWalk = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/valhalla-route-tokyo-tower-to-tokyo-station.json", import.meta.url),
+      "utf8"
+    )
+  );
+  const locations = [
+    { lat: 35.6586, lon: 139.7454 },
+    { lat: 35.6812, lon: 139.7671 },
+  ];
+
+  it("returns the route summary and directions", async () => {
+    stub.routes.set("/valhalla/route", () => ({ body: tokyoWalk }));
+    const result = await structured("osm_routing", { locations, costing: "pedestrian", language: "ja-JP" });
+    expect(result).toMatchObject({ costing: "pedestrian", distanceKm: 3.801, durationSeconds: 2744 });
+    expect(result.legs[0].maneuvers[0].instruction).toBe("Walk northeast on the walkway.");
+    expect(result.geometry).toBeUndefined();
+    expect(JSON.parse(stub.requests[0].body)).toMatchObject({ costing: "pedestrian", language: "ja-JP" });
+  });
+
+  it("drives by default", async () => {
+    stub.routes.set("/valhalla/route", () => ({ body: tokyoWalk }));
+    await structured("osm_routing", { locations });
+    expect(JSON.parse(stub.requests[0].body).costing).toBe("auto");
+  });
+
+  it("returns the line on request", async () => {
+    stub.routes.set("/valhalla/route", () => ({ body: tokyoWalk }));
+    const result = await structured("osm_routing", { locations, include_geometry: true });
+    expect(result.geometry.coordinates).toHaveLength(216);
+  });
+
+  it("reports fewer than two locations as a tool error", async () => {
+    expect(await errorText("osm_routing", { locations: locations.slice(0, 1) })).toMatch(/locations/);
+  });
+
+  it("reports an unknown costing as a tool error", async () => {
+    expect(await errorText("osm_routing", { locations, costing: "hovercraft" })).toMatch(/costing/);
+  });
+
+  it("reports Valhalla's error as a tool error", async () => {
+    stub.routes.set("/valhalla/route", () => ({
+      status: 400,
+      body: { error_code: 171, error: "No suitable edges near location", status_code: 400 },
+    }));
+    expect(await errorText("osm_routing", { locations })).toBe(
+      "Valhalla route failed: 400 Bad Request\nNo suitable edges near location (error_code 171)"
+    );
   });
 });
