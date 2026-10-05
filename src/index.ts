@@ -12,7 +12,7 @@ import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
 import { searchNearby } from "./lib/nearby.js";
 import { runOverpass } from "./lib/overpass.js";
 import { describeTag, keyValues, searchKeys } from "./lib/taginfo.js";
-import { costings, isochrone, route } from "./lib/valhalla.js";
+import { costings, isochrone, optimizedRoute, route, routeMatrix } from "./lib/valhalla.js";
 import { language, latitude, longitude, place } from "./lib/schemas.js";
 
 const server = new McpServer({
@@ -178,6 +178,44 @@ server.registerTool(
     result(await searchNearby({ lat, lon, radiusM: radius_m, tags, name, limit }))
 );
 
+const routeOutput = {
+  costing: z.enum(costings),
+  distanceKm: z.number(),
+  durationSeconds: z.number(),
+  hasToll: z.boolean(),
+  hasHighway: z.boolean(),
+  hasFerry: z.boolean(),
+  legs: z
+    .array(
+      z.object({
+        distanceKm: z.number(),
+        durationSeconds: z.number(),
+        maneuvers: z.array(
+          z.object({
+            instruction: z.string(),
+            distanceKm: z.number(),
+            durationSeconds: z.number(),
+            streetNames: z.array(z.string()).optional(),
+          })
+        ),
+      })
+    )
+    .describe("One leg between each pair of consecutive locations"),
+  geometry: z
+    .object({
+      type: z.literal("LineString"),
+      coordinates: z.array(z.tuple([z.number(), z.number()])),
+    })
+    .optional(),
+};
+
+const costing = z
+  .enum(costings)
+  .default("auto")
+  .describe("How to travel: auto (car), pedestrian, bicycle, ...");
+
+const point = z.object({ lat: latitude, lon: longitude });
+
 server.registerTool(
   "osm_routing",
   {
@@ -186,53 +224,18 @@ server.registerTool(
       "Find a route through two or more locations in order with Valhalla, using OpenStreetMap roads and paths. Returns the distance, the travel time and turn-by-turn directions. Use osm_geocoding first to turn place names into coordinates.",
     inputSchema: {
       locations: z
-        .array(z.object({ lat: latitude, lon: longitude }))
+        .array(point)
         .min(2)
         .max(20)
         .describe("Start, optional stops, and destination, in order"),
-      costing: z
-        .enum(costings)
-        .default("auto")
-        .describe("How to travel: auto (car), pedestrian, bicycle, ..."),
-      language: z
-        .string()
-        .optional()
-        .describe("Language of the directions, e.g. en-US or ja-JP"),
+      costing,
+      language: z.string().optional().describe("Language of the directions, e.g. en-US or ja-JP"),
       include_geometry: z
         .boolean()
         .default(false)
         .describe("Also return the route line as a GeoJSON LineString ([lon, lat] pairs); it can be long"),
     },
-    outputSchema: {
-      costing: z.enum(costings),
-      distanceKm: z.number(),
-      durationSeconds: z.number(),
-      hasToll: z.boolean(),
-      hasHighway: z.boolean(),
-      hasFerry: z.boolean(),
-      legs: z
-        .array(
-          z.object({
-            distanceKm: z.number(),
-            durationSeconds: z.number(),
-            maneuvers: z.array(
-              z.object({
-                instruction: z.string(),
-                distanceKm: z.number(),
-                durationSeconds: z.number(),
-                streetNames: z.array(z.string()).optional(),
-              })
-            ),
-          })
-        )
-        .describe("One leg between each pair of consecutive locations"),
-      geometry: z
-        .object({
-          type: z.literal("LineString"),
-          coordinates: z.array(z.tuple([z.number(), z.number()])),
-        })
-        .optional(),
-    },
+    outputSchema: routeOutput,
     annotations,
   },
   async ({ locations, costing, language, include_geometry }) =>
@@ -248,7 +251,7 @@ server.registerTool(
     inputSchema: {
       lat: latitude.describe("Latitude of the start"),
       lon: longitude.describe("Longitude of the start"),
-      costing: z.enum(costings).default("auto").describe("How to travel: auto (car), pedestrian, bicycle, ..."),
+      costing,
       minutes: z
         .array(z.number().positive().max(120))
         .min(1)
@@ -264,7 +267,7 @@ server.registerTool(
     },
     outputSchema: {
       costing: z.enum(costings),
-      origin: z.object({ lat: latitude, lon: longitude }),
+      origin: point,
       snappedTo: z
         .object({ lat: latitude, lon: longitude, distanceM: z.number() })
         .describe("Where the start was placed on the road network, and how far that is from the origin"),
@@ -285,6 +288,69 @@ server.registerTool(
   },
   async ({ lat, lon, costing, minutes, km }) =>
     result(await isochrone({ lat, lon }, { costing, minutes, km }))
+);
+
+server.registerTool(
+  "osm_optimized_route",
+  {
+    title: "Optimized route",
+    description:
+      "Find the quickest order to visit several locations with Valhalla, keeping the first and the last where they are, and return that route. order lists the original indexes in the order they are visited. For a round trip, repeat the start as the last location.",
+    inputSchema: {
+      locations: z
+        .array(point)
+        .min(3)
+        .max(20)
+        .describe("Start, the stops to put in order, and the end"),
+      costing,
+      language: z.string().optional().describe("Language of the directions, e.g. en-US or ja-JP"),
+      include_geometry: z
+        .boolean()
+        .default(false)
+        .describe("Also return the route line as a GeoJSON LineString ([lon, lat] pairs); it can be long"),
+    },
+    outputSchema: {
+      order: z.array(z.number()).describe("Indexes into locations, in the order they are visited"),
+      ...routeOutput,
+    },
+    annotations,
+  },
+  async ({ locations, costing, language, include_geometry }) =>
+    result(await optimizedRoute(locations, { costing, language, includeGeometry: include_geometry }))
+);
+
+const snappedLocation = z.object({
+  lat: latitude,
+  lon: longitude,
+  snappedTo: z
+    .object({ lat: latitude, lon: longitude, distanceM: z.number() })
+    .describe("Where the location was placed on the road network, and how far that is from it"),
+});
+
+server.registerTool(
+  "osm_route_matrix",
+  {
+    title: "Travel time matrix",
+    description:
+      "Travel time and distance by road from every source to every target with Valhalla, e.g. to find which of several shops is quickest to reach. matrix[i][j] is from sources[i] to targets[j], or null when there is no route. Check snappedTo: a large distanceM means a location is far from any road or path, and its times are not to be trusted. Times can include ferries (a walk across Tokyo may take a water bus); use osm_routing to see how a pair is travelled.",
+    inputSchema: {
+      sources: z.array(point).min(1).max(25).describe("Where to start from"),
+      targets: z.array(point).min(1).max(25).describe("Where to go to"),
+      costing,
+    },
+    outputSchema: {
+      costing: z.enum(costings),
+      sources: z.array(snappedLocation),
+      targets: z.array(snappedLocation),
+      matrix: z
+        .array(
+          z.array(z.object({ durationSeconds: z.number(), distanceKm: z.number() }).nullable())
+        )
+        .describe("One row per source, one entry per target"),
+    },
+    annotations,
+  },
+  async ({ sources, targets, costing }) => result(await routeMatrix(sources, targets, { costing }))
 );
 
 const taginfoNote =

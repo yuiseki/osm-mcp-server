@@ -97,28 +97,28 @@ export type RouteOptions = {
   includeGeometry?: boolean;
 };
 
-/** A route through the locations in order. */
-export const route = async (
-  locations: Location[],
-  { costing, language, includeGeometry = false }: RouteOptions
-): Promise<Route> => {
-  const response = await request(
-    "Valhalla route",
-    `${endpoints().valhalla}/route`,
+type ValhallaTrip = ValhallaRoute["trip"];
+
+const post = async (label: string, path: string, body: unknown) =>
+  request(
+    label,
+    `${endpoints().valhalla}/${path}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        locations: locations.map(({ lat, lon }) => ({ lat, lon })),
-        costing,
-        units: "kilometers",
-        ...(language ? { language } : {}),
-      }),
+      body: JSON.stringify(body),
     },
     jsonErrorDetail
   );
-  const { trip } = (await response.json()) as ValhallaRoute;
 
+const routeRequest = (locations: Location[], { costing, language }: RouteOptions) => ({
+  locations: locations.map(({ lat, lon }) => ({ lat, lon })),
+  costing,
+  units: "kilometers",
+  ...(language ? { language } : {}),
+});
+
+const toRoute = (trip: ValhallaTrip, costing: Costing, includeGeometry: boolean): Route => {
   const result: Route = {
     costing,
     distanceKm: trip.summary.length,
@@ -146,6 +146,83 @@ export const route = async (
     result.geometry = { type: "LineString", coordinates };
   }
   return result;
+};
+
+/** A route through the locations in order. */
+export const route = async (locations: Location[], options: RouteOptions): Promise<Route> => {
+  const response = await post("Valhalla route", "route", routeRequest(locations, options));
+  const { trip } = (await response.json()) as ValhallaRoute;
+  return toRoute(trip, options.costing, options.includeGeometry ?? false);
+};
+
+/**
+ * A route that keeps the first and last locations and visits the others in
+ * the order that takes the least time. order lists the original indexes in
+ * the order they are visited.
+ */
+export const optimizedRoute = async (
+  locations: Location[],
+  options: RouteOptions
+): Promise<Route & { order: number[] }> => {
+  const response = await post("Valhalla optimized_route", "optimized_route", routeRequest(locations, options));
+  const { trip } = (await response.json()) as {
+    trip: ValhallaTrip & { locations: { original_index: number }[] };
+  };
+  return {
+    order: trip.locations.map((l) => l.original_index),
+    ...toRoute(trip, options.costing, options.includeGeometry ?? false),
+  };
+};
+
+export type SnappedLocation = LatLon & { snappedTo: LatLon & { distanceM: number } };
+
+export type RouteMatrix = {
+  costing: Costing;
+  sources: SnappedLocation[];
+  targets: SnappedLocation[];
+  matrix: ({ durationSeconds: number; distanceKm: number } | null)[][];
+};
+
+const snapped = (input: LatLon, placed: LatLon): SnappedLocation => ({
+  lat: input.lat,
+  lon: input.lon,
+  snappedTo: {
+    lat: placed.lat,
+    lon: placed.lon,
+    distanceM: distanceMetres(input, placed),
+  },
+});
+
+/** Travel time and distance from every source to every target. */
+export const routeMatrix = async (
+  sources: LatLon[],
+  targets: LatLon[],
+  { costing }: { costing: Costing }
+): Promise<RouteMatrix> => {
+  const plain = (l: LatLon) => ({ lat: l.lat, lon: l.lon });
+  const response = await post("Valhalla sources_to_targets", "sources_to_targets", {
+    sources: sources.map(plain),
+    targets: targets.map(plain),
+    costing,
+    units: "kilometers",
+  });
+  const data = (await response.json()) as {
+    sources: LatLon[];
+    targets: LatLon[];
+    sources_to_targets: { time: number | null; distance: number | null }[][];
+  };
+  return {
+    costing,
+    sources: sources.map((s, i) => snapped(s, data.sources[i])),
+    targets: targets.map((t, i) => snapped(t, data.targets[i])),
+    matrix: data.sources_to_targets.map((row) =>
+      row.map((cell) =>
+        cell.time === null || cell.distance === null
+          ? null
+          : { durationSeconds: Math.round(cell.time), distanceKm: cell.distance }
+      )
+    ),
+  };
 };
 
 export type Isochrone = {
@@ -178,24 +255,15 @@ export const isochrone = async (
   const contours = minutes
     ? [...minutes].sort((a, b) => a - b).map((time) => ({ time }))
     : [...km!].sort((a, b) => a - b).map((distance) => ({ distance }));
-  const response = await request(
-    "Valhalla isochrone",
-    `${endpoints().valhalla}/isochrone`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        locations: [{ lat: origin.lat, lon: origin.lon }],
-        costing,
-        contours,
-        polygons: true,
-        // Valhalla answers with a tiny square instead of an error when the
-        // origin is nowhere near a road; the snapped location tells them apart.
-        show_locations: true,
-      }),
-    },
-    jsonErrorDetail
-  );
+  const response = await post("Valhalla isochrone", "isochrone", {
+    locations: [{ lat: origin.lat, lon: origin.lon }],
+    costing,
+    contours,
+    polygons: true,
+    // Valhalla answers with a tiny square instead of an error when the
+    // origin is nowhere near a road; the snapped location tells them apart.
+    show_locations: true,
+  });
   const { features } = (await response.json()) as { features: IsochroneFeature[] };
 
   const snapped = features.find((f) => f.properties.type === "snapped")?.geometry

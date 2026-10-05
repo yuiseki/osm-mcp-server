@@ -84,8 +84,10 @@ describe("osm-mcp-server over stdio", () => {
     expect(tools.map((t) => t.name).sort()).toEqual([
       "osm_geocoding",
       "osm_isochrone",
+      "osm_optimized_route",
       "osm_overpass_query",
       "osm_reverse_geocoding",
+      "osm_route_matrix",
       "osm_routing",
       "osm_search_nearby",
       "osm_taginfo_keys",
@@ -441,5 +443,59 @@ describe("osm_isochrone", () => {
     expect(
       await errorText("osm_isochrone", { lat: 35.6, lon: 139.7, minutes: [5, 10, 15, 20, 25] })
     ).toMatch(/minutes/);
+  });
+});
+
+describe("osm_route_matrix and osm_optimized_route", () => {
+  const fixture = (name: string) =>
+    JSON.parse(readFileSync(new URL(`./fixtures/valhalla-${name}.json`, import.meta.url), "utf8"));
+  const tower = { lat: 35.6586, lon: 139.7454 };
+  const station = { lat: 35.6812, lon: 139.7671 };
+  const shibuya = { lat: 35.6595, lon: 139.7005 };
+  const bay = { lat: 35.55, lon: 139.9 };
+  const skytree = { lat: 35.7101, lon: 139.8107 };
+
+  it("osm_route_matrix returns the table and the snapped locations", async () => {
+    stub.routes.set("/valhalla/sources_to_targets", () => ({ body: fixture("matrix-walk-2x3") }));
+    const result = await structured("osm_route_matrix", {
+      sources: [tower, station],
+      targets: [station, shibuya, bay],
+      costing: "pedestrian",
+    });
+    expect(result.matrix[0][0]).toEqual({ durationSeconds: 2743, distanceKm: 3.801 });
+    expect(result.targets[2].snappedTo.distanceM).toBeGreaterThan(3000);
+  });
+
+  it("osm_route_matrix drives by default", async () => {
+    stub.routes.set("/valhalla/sources_to_targets", () => ({ body: fixture("matrix-walk-2x3") }));
+    await structured("osm_route_matrix", { sources: [tower, station], targets: [station, shibuya, bay] });
+    expect(JSON.parse(stub.requests[0].body).costing).toBe("auto");
+  });
+
+  it("osm_route_matrix reports an empty list as a tool error", async () => {
+    expect(await errorText("osm_route_matrix", { sources: [], targets: [station] })).toMatch(/sources/);
+  });
+
+  it("osm_optimized_route returns the visiting order", async () => {
+    stub.routes.set("/valhalla/optimized_route", () => ({ body: fixture("optimized-tokyo-loop") }));
+    const result = await structured("osm_optimized_route", {
+      locations: [tower, station, shibuya, skytree, tower],
+    });
+    expect(result.order).toEqual([0, 2, 3, 1, 4]);
+    expect(result.legs).toHaveLength(4);
+  });
+
+  it("osm_optimized_route needs at least three locations", async () => {
+    expect(await errorText("osm_optimized_route", { locations: [tower, station] })).toMatch(/locations/);
+  });
+
+  it("reports Valhalla's error as a tool error", async () => {
+    stub.routes.set("/valhalla/optimized_route", () => ({
+      status: 400,
+      body: { error_code: 154, error: "Path distance exceeds the max distance limit: 400000 meters" },
+    }));
+    expect(
+      await errorText("osm_optimized_route", { locations: [tower, station, { lat: 30, lon: -140 }] })
+    ).toMatch(/max distance limit/);
   });
 });

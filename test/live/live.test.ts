@@ -152,4 +152,27 @@ describe.concurrent("live", { timeout: 60_000 }, () => {
     });
     expect(result.isError).toBe(true);
   });
+
+  it("builds a walking time matrix", async () => {
+    const result = await call("osm_route_matrix", {
+      sources: [tokyoTower],
+      targets: [tokyoStation, tokyoTower],
+      costing: "pedestrian",
+    });
+    expect(result.matrix[0][0].distanceKm).toBeGreaterThan(3);
+    expect(result.matrix[0][1].distanceKm).toBe(0);
+    expect(result.targets[0].snappedTo.distanceM).toBeLessThan(100);
+  });
+
+  it("orders stops for a drive around Tokyo and back", async () => {
+    const shibuya = { lat: 35.6595, lon: 139.7005 };
+    const skytree = { lat: 35.7101, lon: 139.8107 };
+    const result = await call("osm_optimized_route", {
+      locations: [tokyoTower, tokyoStation, shibuya, skytree, tokyoTower],
+    });
+    expect(result.order[0]).toBe(0);
+    expect(result.order.at(-1)).toBe(4);
+    expect([...result.order].sort()).toEqual([0, 1, 2, 3, 4]);
+    expect(result.legs).toHaveLength(4);
+  });
 });
