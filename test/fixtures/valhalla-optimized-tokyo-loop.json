@@ -1,0 +1,195 @@
+{
+  "trip": {
+    "status": 0,
+    "units": "kilometers",
+    "language": "en-US",
+    "locations": [
+      {
+        "type": "break",
+        "lat": 35.6586,
+        "lon": 139.7454,
+        "side_of_street": "left",
+        "original_index": 0
+      },
+      {
+        "type": "break",
+        "lat": 35.6595,
+        "lon": 139.7005,
+        "original_index": 2
+      },
+      {
+        "type": "break",
+        "lat": 35.7101,
+        "lon": 139.8107,
+        "side_of_street": "right",
+        "original_index": 3
+      },
+      {
+        "type": "break",
+        "lat": 35.6812,
+        "lon": 139.7671,
+        "side_of_street": "left",
+        "original_index": 1
+      },
+      {
+        "type": "break",
+        "lat": 35.6586,
+        "lon": 139.7454,
+        "side_of_street": "left",
+        "original_index": 4
+      }
+    ],
+    "summary": {
+      "has_time_restrictions": false,
+      "has_toll": true,
+      "has_highway": true,
+      "has_ferry": false,
+      "min_lat": 35.653887,
+      "min_lon": 139.693213,
+      "max_lat": 35.7151,
+      "max_lon": 139.810653,
+      "time": 3984.249,
+      "length": 37.141,
+      "cost": 8917.113
+    },
+    "legs": [
+      {
+        "summary": {
+          "has_time_restrictions": false,
+          "has_toll": true,
+          "has_highway": true,
+          "has_ferry": false,
+          "min_lat": 35.654775,
+          "min_lon": 139.695121,
+          "max_lat": 35.665986,
+          "max_lon": 139.745272,
+          "time": 744.769,
+          "length": 7.293,
+          "cost": 1400.712
+        },
+        "shape": "khl_cAuojpiGrAgAfEqHbGjFf@~BbEnYP|Eu@hMEbHfBpOn@~CzWoKtEsBtDeBdOyGbb@{UjCoBxBcB~LkJbGmDtEmBpEqArMsDtFkAbIkAxBOfJo@pFpGrD`EQ`CkBre@|B|@b@t@b@nBNrCBvCy@dS@hDZvCr@dD`@zCRbECzDmDr~@e@dHs@lGcA|G_B|H{Ix]cDbQgBtIgBnJ{A~J_AlKkJtbB}@nKaAbHu@|Dw@hDq@|Bu@nB{@jB{B~DwB|CgDzDuBnB}BlBqLpH{FjD_m@tZsP~H_CbAmDpA}C`AqCn@cDl@kDf@_D\\yCJ}CAwEQ{Ee@yWmDc[mEqGuAmF{AuGsBmGiCkFgCqNiJma@sZwCkBqFwCqJiEsG{B}ImBcJwAgv@eLyy@yNyf@}HePmC_NyB_LcBuJmA}TcAmBAoBHkBLqB^oBl@_Br@aBz@mAz@aB`B}AnBkAfBaAnBq@xBq@tCg@bDYnDI~EHhFd@dF|@bFpAnF~AlFxB`G|Qzc@z[|t@j`@rbAh`@b_Al_@~}@|FxNhnApkD|Uvl@hTth@pEdMfEhNpQtr@bq@|pCtC~MhCbOdC`RzB`SvBdTxApOnAbO`A~Nb@fKjK~{Dx@dUnXfjGfRtjErEfdAdHp}ArAre@nB~`ArE|xCn@vYv@~Rv@bPv@zNr@lIhAnJvA|IvBzJ|]nyA|^t_Bdc@foBdBnIjBbKrE`S`DpQdQfiAzC|RyBxCmAz@uFjE{DyBiEm@wBmAqGiDwK}FwPoJyPiJoRgLaAm@oGuEuIuGgIiG}BeBk_@eZ_HeI{E{Gw@eAqAeBo@aA{FwIwBqEwByFiBuFoB_Ka@}Bg@qCi@iC_Mms@e@kCa@_CiAiFs@{Cu@kDUaC_@eGK{C?sDBgCHaCLeCTkCFy@JoAbAcP",
+        "maneuvers": [
+          {
+            "type": 3,
+            "instruction": "Drive southeast.",
+            "time": 9.387,
+            "length": 0.023,
+            "street_names": null
+          },
+          {
+            "type": 10,
+            "instruction": "Turn right.",
+            "time": 47.054,
+            "length": 0.141,
+            "street_names": null
+          }
+        ]
+      },
+      {
+        "summary": {
+          "has_time_restrictions": false,
+          "has_toll": true,
+          "has_highway": true,
+          "has_ferry": false,
+          "min_lat": 35.653887,
+          "min_lon": 139.693213,
+          "max_lat": 35.710799,
+          "max_lon": 139.810653,
+          "time": 1581.345,
+          "length": 18.016,
+          "cost": 3559.822
+        },
+        "shape": "emn_cAcpsmiGcAbPKnAGx@UjCMdCI`CCfC?rDJzC^dGT`Ct@jDr@zChAhF`@~Bd@jC~Lls@h@hCf@pC`@|BnB~JhBtFvBxFvBpEzFvIn@`ApAdBv@dAzEzG~GdIj_@dZ|BdBfIhGtItGnGtE`Al@nRfLxPhJvPnJvK|FpGhDvBlAhEl@zDxBlOrIbLjGnBpBrEpDtKzHrQxM`LdIzKtJdI`J|ExG`AzAxE~I{KxImEmG{CiDaAyDeMqLsJmImLmJoYcTcF}E}DaFsDeGoBeEgBcFaBsFyAeGqAiHmA{IcAcJaHqp@iBcZqCuVkFgYcc@ooB_Ts_AePqq@mWmfAuBqJwA_JmA_Ky@eKs@gN{@iQw@gSi@}R]aPc@qSeD}yBeB{`AoAie@wG}yA}EygAsR_jE}XwkGS_Fe@eMeLyeEy@}OaAaMeBuRw@yH}@gJiCmTyBaPeCwNwCgNyp@mpCuQwr@}DgMqCuHuAyDuS}g@cVem@qXwv@us@aqBy]{|@uj@yrAs`@qbA{a@m`AqI{PwJuPae@uu@{L{RyLmQ{KuMqUcUcVkUi`@k]uZyWyZ_YcVmVqh@ok@kf@uh@kGiG}FkGuEsF_CaDyBaD_D_GeCiGiBqF_BcGsA_HwAqJwCuTmEc[mDoRiBsIgCaJkC{H}BmG_CgFgCuEaCqDuCoDkEcFiq@cs@sJoIkDkC{DkCoXiOchAem@iH}DiKuFsC{AuBgAaBw@eBu@}Ak@}Ac@aB]aBWoDYgBCaDD}CPqD`@}Dn@oD|@sCbAgCnAqBnAwC|BsEzDo\\jYiE~CoDzB_ExByDtB_EnC}DbDmTdTsDdEeDfEsCvE_C~EcCdGyBbHoC~J_ErQkDlNuCpJwCjHeDhGmDtF{D`FiEdE_F~DmE`DqFhDqFxCmx@t`@sVtLiHhCmGfBeGpAuG|@aJj@iLNcHA_HUaHg@sHs@{l@_IsdD}d@osBuYqDy@sBk@mBs@oBaAyA}@oAaA_BuAcA_AmAyAaB{BgBuCwAwCwAwDmAaEgA{EeA}Gw@cGcEib@}Ecg@eAeLm@mIQ_HDkHRyFp@mN~@oR~AsYz@iRX_KF{GEuHQwG]qF_@mEo@kEo@wDy@wD}@kD}Li`@_Sgi@wHmTqGoRgI}WsHaXoKg`@_Ys`A_CgImA{EcA}EcAmFu@mFk@_F]gFQeFI_F?_FDsFNsF`@}HxEmy@d@aJ\\wIPuIH_JVqkBHiHPsH^cGp@iG`AaGjAoFtAaFz@sCr@kBlAsCtNe[zC}GnCeHxBuGnB_HvLie@|@aD`AaDfAuCrAqCvAkCzAiC`BcCfBaCrL_OlD{EdCqD|BuDfBcDbA}BfAgDbAyDv@wDt@sEn@mEh@sErJu~@x@eLf@wIlAsX^uIf@_KdAyKr@uGfA_IlAwGvAuF`B}E~ByFnCuFjVqc@hFkI~DgFvEkF~H}HvL}K|w@gp@rDkCvHmEzGwC~Q}Gd\\kKxHyCdD{AzBoAzB}A`ByAzAcB~AmBxAuBdAiBdAqBbAyBbAqCdAsDp@gDl@_Ez@_HbQs_B|Hmv@bAuMh@wKJyDHoDAuDGkDOyDUqD_@aEuEu`@_NqiAcAkJe@oGWcGKwEEsE@iDJwCN_CTsBZoBt@cDhAyD|AqElB{ErSkd@`CqE|CiFhCeDfD_E|CcDhCwBdBoAzBmApCoAfEyAfEeAtDu@|]wGvMeChHaB|GcBjGoBtFuBpFcC`FuC~EyDnFgF|LmNpYe]lFsGnF}GrDeFfBwCpBeEzAoEjAqEpAcHj@wEXqEFeD?}BCqBK}BUmC[gCc@}Bq@aC}A{EcLa[i[a{@oFyO{EyNaPkh@qFeP{R_n@kg@_uA{G{PaIaP_KmPuVi_@_Zsc@su@keAiPuTsCqDcBcBwBiBmDmCoA}@_B}@sCqAsC_AwCo@kCa@uE[yCA}CH{CVwCb@wD`AyDrAkD`BaXrOkEpCuE~CcDjCgDxCsCxCmC`DsChDsC|D}IxLcStZwHlK{IpK{JhKoU`Tea@z\\wCtByCjBqCpA_C|@iCn@eCd@_C\\uBLaBFsACoBI_BI_BOyDe@kCi@wC{@uBy@kBcAiBmA_CoBaDaDmD_EuD_FcN{PwBwB{BkBcC}AoCqAkCcAgCq@kCa@sC]kCM{BAwBFqBJct@pGeMx@uMX{NIaXk@uNs@}Hu@yIkAoHqAoG{A}WgHgJkCgHmCsImDmFuCiGeDkG{DoHeFaGsEaDqCyJmJoQqQ_KkK_JsImH_HeK{IuH_Gsu@ik@m`@kZmGgEiHyE_H}DuyAqt@sSaJaPiGy}@kWeTcHeSgIqRqIsOsHeN{Hsb@kXoiAaj@igAoh@iTkT}PyJ}A}@{EwCaEcCrIwRcEkCmAaBo@{AiEk\\qGgh@kFeb@o@gFi@mE{Di[sHml@[aCa@iF[sFQ_GO_FiAwr@aBmx@WoMSyJ}Auz@IyDGoD{B_`AMcFG}C_@wYUgPc@uUGoD[oQOmJeDX_AFiBJgENcJH_CAmJBqGDqB@aDrBiEBcTLeZRgEmBhEyAlDIdOKjUMdCCjEE`DzAbBmIb@{CjFc^TmDByCGqESuFw@ySY_HcC~AsEZ{AJoANo@Tm@`@c@l@c@pBSfAg@~@gAx@y@RwP`A_@CYOUUSe@Ic@AOC]SkFQeH}Aa`@",
+        "maneuvers": [
+          {
+            "type": 1,
+            "instruction": "Drive west on 道玄坂/Dogen-zaka Street. Continue on Dogen-zaka Street.",
+            "time": 136.401,
+            "length": 0.667,
+            "street_names": [
+              "Dogen-zaka Street"
+            ]
+          },
+          {
+            "type": 17,
+            "instruction": "Stay straight to take the ramp.",
+            "time": 64.167,
+            "length": 0.295,
+            "street_names": [
+              "246",
+              "玉川通り(神泉町)",
+              "玉川通り",
+              "Tamagawa-dori",
+              "国道246号",
+              "national route 246"
+            ]
+          }
+        ]
+      },
+      {
+        "summary": {
+          "has_time_restrictions": false,
+          "has_toll": false,
+          "has_highway": false,
+          "has_ferry": false,
+          "min_lat": 35.680381,
+          "min_lon": 139.764244,
+          "max_lat": 35.7151,
+          "max_lon": 139.810653,
+          "time": 1015.538,
+          "length": 7.47,
+          "cost": 2118.771
+        },
+        "shape": "w}qbcAytjtiG|A``@xIm@rGc@TBPHLVHf@F~A~OeArE[nCp@X~Gv@xSRtFFpECxCUlDkFb^c@zCcBlIaDrBiEBcTLeZRgEmB_NFwE?cF@mCHgCf@gBr@qAz@gBdE{ArD_FtLaAvBsGbOkEfKwAdDuApCyFjN{GhOs@xAkMdZeB`EsCvGoDrI_DnHiDnI}B|Ei@hAiFfNeGdPaDvHgE|JitA`jCsHvOyAhDk@xBiAfGdGbE|b@b^t\\tX`BvA~FzExDhEle@th@fMlNlThX|@hAvAdBfBtA|i@pb@~\\hXxC|BzC~BrRnNzHbE`g@pZdHlEpGlEzB|AzIfHhVnUzArAnGfHjAbA^Z~IbIjk@x[zWjP|BvAfEjC`FdDlKbH~]|TpAx@nAv@bFdEhk@ne@nQnRl@r@~EtFjEdGr]pd@jQtUjPpTzYt^jAxAzCtDfB|B`UhY`QnTlA|ALNtIrKfFbGvKrMjLjNlIxH|B`B~CpBpD|BhD`ChD|BzWhQpUrOnNjJlCbBrA|@zCjBtChBlDtBrUrNb@VzHhE|RvKlW~OhNzH`B~@nEdC`DbB|^vRtUpMrBhA`FpChGbDnFtC~OpI`QhJjB`A`ExBdDxAhOzGb@ThRhH`GvCxAnAlBhBt@~@bC|CzS|YlDvE|ClEzDfGxQzVvUn\\rVr]dClDfClDva@xk@~A|BnEhG|CrEhYja@zB`DfCrD|HhLjCxD`C~El`@nx@j@lA`BdDbBdDpSja@pIhQr@xAhDdHnCzFpNdY~Wzk@vAnEhKrd@dIz]r@`DV~GzEbPzAfFl@rCvLdk@`BvHn@~C~@pEfLtj@`FdVl@vCxB~JfHyBfBi@b^iKnOcFjAa@bD}@vDoA`A[pb@mNpY}JnAc@vE{AhEuA~Ag@t[{JjGmBlCw@`D{@x\\mJlBk@dA[hMkBbHeAbBXpF`AtLrB`KjB~E`A~AZzH`DzB~@tDlBdT|KdSrKlAp@dFrClDlBw@zCcB~FuJp\\mInYgBhGgAxDw@pCwZ|eAcBjH{ArHs@xDk@~DcFn`@uDvXi@xDo@|Ee@zDkKzx@UdBeAjImFj`@a@tC_A|F_BfK{Rl|AeA~I|EzAfTzFdv@nQvNhDrHhBzN~Cxi@bMdAVdFjAnJ~BnJzB~FrAfAVbh@pLtAZdLpCoBoL?w@|AeMjAaJ^qCoCi@cCg@oKzFm@\\eJnFaA`@y@Py@AgH_Bq@Ua@c@Wc@Cq@NiArA}JRi@\\a@\\WIkCrC{Sl@s@p@I",
+        "maneuvers": [
+          {
+            "type": 3,
+            "instruction": "Drive west.",
+            "time": 11.551,
+            "length": 0.048,
+            "street_names": null
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left.",
+            "time": 12.565,
+            "length": 0.043,
+            "street_names": null
+          }
+        ]
+      },
+      {
+        "summary": {
+          "has_time_restrictions": false,
+          "has_toll": false,
+          "has_highway": false,
+          "has_ferry": false,
+          "min_lat": 35.658389,
+          "min_lon": 139.743047,
+          "max_lat": 35.681008,
+          "max_lon": 139.765784,
+          "time": 642.595,
+          "length": 4.361,
+          "cost": 1837.806
+        },
+        "shape": "anx`cAarrqiGLA|DjA`DdAdAxA`@fAZxAH`Ci@pBG`BLrBp@fCdDUdDu@hBUlB?nAN|Cn@x@}FJg@XcAl@aAfAw@~HaFv[qRjBs@dB]pBDf[vHhBb@tdAdWvA^bGzA`B^bBdBcBpMkA`JiC|R{Hfm@[~B_AhHaApHwJbu@SxAm@nEs@rFeKnv@[|Bu@hGzGvA`x@jRx~@bVbq@tOhF~AvEdBbFfCl@^lD|BdGvF~DdEoF|GyDhFoOzWcGdOkXp{@}HvWwBzGoYjbAa@xAaBzEc@vA{@nCgPxd@m\\jdAqApP^tIh@zDzApE`AvCxk@b\\jh@zYzPpJbd@bWfRnKtC~AzObJpKdG~YvPdc@vVlGnDdHzBpGfBxr@vSr\\jI~C`AnFbB`YvLdQpHxGpCbFjBnHfDnGrCzIpEzLfHzSbLbVlL`ElBpDdB`HfCxJdDvRdHx@X~DrAjIrCdErAjI~C|e@hPjEzAvC`AlrA~c@n]~LxBv@hQ|GvDfB`DxBxb@x_@|_@b]pFzEfG|FrLbLvXlW~L~JtGpFxBbB`BrApGjFde@f\\pN|IdBhAjH`EjIlDbI`CzJ~BhIbAjAMz@a@n@o@`@_APoAl@gG~@uH|@}Gr@eGj@eEpAqInCkOtA{DfQag@|Ab@dFpAtYtLx@ItFeGjAaAxGsEdByA",
+        "maneuvers": [
+          {
+            "type": 3,
+            "instruction": "Drive south.",
+            "time": 25.201,
+            "length": 0.063,
+            "street_names": null
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left.",
+            "time": 19.466,
+            "length": 0.043,
+            "street_names": null
+          }
+        ]
+      }
+    ]
+  }
+}
