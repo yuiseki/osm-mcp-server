@@ -83,6 +83,7 @@ describe("osm-mcp-server over stdio", () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       "osm_geocoding",
+      "osm_overpass_query",
       "osm_reverse_geocoding",
     ]);
   });
@@ -182,5 +183,68 @@ describe("osm_reverse_geocoding", () => {
     expect(await errorText("osm_reverse_geocoding", { lat: 0, lon: -140 })).toMatch(
       /Unable to geocode/
     );
+  });
+});
+
+describe("osm_overpass_query", () => {
+  const cafes = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ type: "node", id: i + 1, lat: 35.6, lon: 139.7, tags: { amenity: "cafe" } }));
+
+  it("runs the query as JSON and returns the elements", async () => {
+    stub.routes.set("/overpass/api/interpreter", () => ({
+      body: { osm3s: { timestamp_osm_base: "2025-09-14T23:59:55Z" }, elements: cafes(2) },
+    }));
+    const result = await structured("osm_overpass_query", {
+      query: "node(around:300,35.6586,139.7454)[amenity=cafe];out;",
+    });
+    expect(result).toEqual({
+      timestampOsmBase: "2025-09-14T23:59:55Z",
+      totalElements: 2,
+      truncated: false,
+      elements: cafes(2),
+    });
+    const [req] = stub.requests;
+    expect(req.method).toBe("POST");
+    expect(new URLSearchParams(req.body).get("data")).toBe(
+      "[out:json];node(around:300,35.6586,139.7454)[amenity=cafe];out;"
+    );
+  });
+
+  it("keeps 100 elements by default", async () => {
+    stub.routes.set("/overpass/api/interpreter", () => ({ body: { elements: cafes(150) } }));
+    const result = await structured("osm_overpass_query", { query: "node;out;" });
+    expect(result.elements).toHaveLength(100);
+    expect(result.totalElements).toBe(150);
+    expect(result.truncated).toBe(true);
+  });
+
+  it("honours max_elements", async () => {
+    stub.routes.set("/overpass/api/interpreter", () => ({ body: { elements: cafes(5) } }));
+    const result = await structured("osm_overpass_query", { query: "node;out;", max_elements: 2 });
+    expect(result.elements).toHaveLength(2);
+  });
+
+  it("reports a non-JSON output format as a tool error", async () => {
+    expect(await errorText("osm_overpass_query", { query: "[out:xml];node(1);out;" })).toMatch(
+      /Only JSON output is supported/
+    );
+    expect(stub.requests).toHaveLength(0);
+  });
+
+  it("reports a parse error with Overpass's message", async () => {
+    stub.routes.set("/overpass/api/interpreter", () => ({
+      status: 400,
+      body: '<p><strong style="color:#FF0000">Error</strong>: line 1: parse error: Unexpected end of input. </p>',
+    }));
+    expect(await errorText("osm_overpass_query", { query: "node(1" })).toBe(
+      "Overpass failed: 400 Bad Request\nline 1: parse error: Unexpected end of input."
+    );
+  });
+
+  it("reports a timed-out query as a tool error", async () => {
+    stub.routes.set("/overpass/api/interpreter", () => ({
+      body: { elements: [], remark: "runtime error: Query timed out in \"query\" at line 1 after 2 seconds." },
+    }));
+    expect(await errorText("osm_overpass_query", { query: "nwr;out;" })).toMatch(/timed out/);
   });
 });

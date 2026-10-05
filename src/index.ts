@@ -9,6 +9,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { version } from "./lib/config.js";
 import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
+import { runOverpass } from "./lib/overpass.js";
 import { language, latitude, longitude, place } from "./lib/schemas.js";
 
 const server = new McpServer({
@@ -76,6 +77,46 @@ server.registerTool(
   },
   async ({ lat, lon, language }) =>
     result(await reverseGeocode(lat, lon, { language }))
+);
+
+server.registerTool(
+  "osm_overpass_query",
+  {
+    title: "Overpass query",
+    description: [
+      "Run an Overpass QL query against OpenStreetMap data and return the matching elements as JSON.",
+      "Use it to find features by tag in an area, e.g. cafes within 500 m of a point:",
+      "  nwr(around:500,35.6586,139.7454)[amenity=cafe]; out center;",
+      "Tips: always limit the area with around:, a bbox (south,west,north,east) or an area found by name;",
+      "use 'out center;' to get one coordinate for ways and relations; use 'out count;' to only count;",
+      "add [timeout:N] for heavy queries. [out:json] is added for you; other output formats are not supported.",
+      "Coordinates are latitude first. The result says when the data was last updated (timestampOsmBase).",
+    ].join("\n"),
+    inputSchema: {
+      query: z.string().min(1).describe("Overpass QL query"),
+      max_elements: z
+        .number()
+        .int()
+        .min(1)
+        .max(1000)
+        .default(100)
+        .describe("Maximum number of elements to return; the rest are dropped and truncated is set"),
+    },
+    outputSchema: {
+      timestampOsmBase: z
+        .string()
+        .nullable()
+        .describe("When the OSM data behind the answer was last updated"),
+      totalElements: z.number().describe("Number of elements the query matched"),
+      truncated: z.boolean().describe("True when elements were dropped to fit max_elements"),
+      elements: z
+        .array(z.looseObject({ type: z.string(), id: z.number() }))
+        .describe("OSM elements as returned by Overpass (type, id, tags, lat/lon or center, ...)"),
+    },
+    annotations,
+  },
+  async ({ query, max_elements }) =>
+    result(await runOverpass(query, { maxElements: max_elements }))
 );
 
 /**
