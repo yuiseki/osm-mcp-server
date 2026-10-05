@@ -106,6 +106,7 @@ describe("osm-mcp-server over stdio", () => {
       "osm_routing",
       "osm_search_nearby",
       "osm_taginfo_keys",
+      "osm_taginfo_search",
       "osm_taginfo_tag",
       "osm_taginfo_values",
     ]);
@@ -335,6 +336,13 @@ describe("taginfo tools", () => {
     const result = await structured("osm_taginfo_keys", { query: "cuisine" });
     expect(result.keys[0]).toMatchObject({ key: "cuisine", count: 1433692 });
     expect(stub.requests[0].query.get("rp")).toBe("10");
+  });
+
+  it("osm_taginfo_search finds tags by a word in their value", async () => {
+    stub.routes.set(`${api}/search/by_value`, () => ({ body: fixture("search-ramen-ja") }));
+    const result = await structured("osm_taginfo_search", { query: "ラーメン" });
+    expect(result.tags[0]).toEqual({ key: "cuisine:ja", value: "ラーメン", count: 508 });
+    expect(stub.requests[0].query.get("query")).toBe('"ラーメン"');
   });
 
   it("osm_taginfo_values lists values of a key", async () => {

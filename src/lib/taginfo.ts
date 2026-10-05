@@ -23,6 +23,12 @@ export type KeyValues = {
   values: { value: string; count: number; fraction: number }[];
 };
 
+export type TagSearch = {
+  dataUntil: string | null;
+  total: number;
+  tags: { key: string; value: string; count: number }[];
+};
+
 export type WikiPage = {
   lang: string;
   title: string;
@@ -106,6 +112,32 @@ export const keyValues = async (
     key,
     total: page.total ?? page.data.length,
     values: page.data.map(({ value, count, fraction }) => ({ value, count, fraction })),
+  };
+};
+
+/**
+ * taginfo hands the search text to SQLite FTS5 unchanged and answers a syntax
+ * error (from ;, -, " and the like) with 0 results instead of an error. As
+ * one quoted phrase, any text is valid.
+ */
+export const ftsPhrase = (text: string) => `"${text.replace(/"/g, '""')}"`;
+
+/**
+ * Tags of any key whose value contains query as whole words, most used
+ * first.
+ */
+export const searchTags = async (
+  query: string,
+  { limit = 20 }: { limit?: number } = {}
+): Promise<TagSearch> => {
+  const page = await get<{ key: string; value: string; count_all: number }>("search/by_value", {
+    query: ftsPhrase(query),
+    ...paged(limit, "count_all"),
+  });
+  return {
+    dataUntil: page.data_until ?? null,
+    total: page.total ?? page.data.length,
+    tags: page.data.map((t) => ({ key: t.key, value: t.value, count: t.count_all })),
   };
 };
 

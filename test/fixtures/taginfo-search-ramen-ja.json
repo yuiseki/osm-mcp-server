@@ -1,0 +1,33 @@
+{
+  "data_until": "2026-01-29T00:59:50Z",
+  "page": 1,
+  "rp": 5,
+  "total": 441,
+  "data": [
+    {
+      "key": "cuisine:ja",
+      "value": "ラーメン",
+      "count_all": 508
+    },
+    {
+      "key": "cuisine",
+      "value": "ラーメン",
+      "count_all": 65
+    },
+    {
+      "key": "description",
+      "value": "ラーメン",
+      "count_all": 23
+    },
+    {
+      "key": "name",
+      "value": "ラーメン",
+      "count_all": 14
+    },
+    {
+      "key": "cuisine",
+      "value": "japanese;ラーメン",
+      "count_all": 9
+    }
+  ]
+}

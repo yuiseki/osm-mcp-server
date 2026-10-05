@@ -15,6 +15,7 @@ An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use Op
 | `osm_route_matrix` | Valhalla | Travel time and distance from every source to every target (up to 25 each), with where each location was placed on the road network and the name of the road it is on. |
 | `osm_isochrone` | Valhalla | Returns the area reachable from a point within up to four travel times or distances as GeoJSON polygons, and where the start was placed on the road network. |
 | `osm_taginfo_keys` | taginfo | Finds tag keys whose name contains a word, most used first. |
+| `osm_taginfo_search` | taginfo | Finds tags of any key whose value contains a word, most used first, for when the key is not known (`convenience` finds `shop=convenience`). |
 | `osm_taginfo_values` | taginfo | Lists the values used with a key, most used first, optionally only those containing a word (e.g. `cuisine` values with `ramen`). |
 | `osm_taginfo_tag` | taginfo | Describes a tag or a key: how often it is used on nodes, ways and relations, its OSM wiki description in English and one more language, and the tags most often used with it. |
 

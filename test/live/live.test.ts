@@ -188,4 +188,14 @@ describe.concurrent("live", { timeout: 60_000 }, () => {
     expect(end.snappedTo.distanceM).toBeGreaterThan(1000);
     expect(end.snappedTo.roadNames.join(" ")).toMatch(/Ferry|フェリー/);
   });
+
+  it("finds shop=convenience by a word, without knowing the key", async () => {
+    const { tags } = await call("osm_taginfo_search", { query: "convenience", limit: 5 });
+    expect(tags[0]).toMatchObject({ key: "shop", value: "convenience" });
+  });
+
+  it("does not lose a value with a semicolon in it", async () => {
+    const { tags } = await call("osm_taginfo_search", { query: "noodle;ramen", limit: 5 });
+    expect(tags.map((t: { value: string }) => t.value)).toContain("noodle;ramen");
+  });
 });

@@ -11,7 +11,7 @@ import { version } from "./lib/config.js";
 import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
 import { searchNearby } from "./lib/nearby.js";
 import { runOverpass } from "./lib/overpass.js";
-import { describeTag, keyValues, searchKeys } from "./lib/taginfo.js";
+import { describeTag, keyValues, searchKeys, searchTags } from "./lib/taginfo.js";
 import { costings, isochrone, optimizedRoute, route, routeMatrix } from "./lib/valhalla.js";
 import { language, latitude, longitude, place } from "./lib/schemas.js";
 
@@ -93,7 +93,7 @@ server.registerTool(
       "Tips: always limit the area with around:, a bbox (south,west,north,east) or an area found by name;",
       "use 'out center;' to get one coordinate for ways and relations; use 'out count;' to only count;",
       "add [timeout:N] for heavy queries. [out:json] is added for you; other output formats are not supported.",
-      "If you are not sure which tag mappers use for something, check with osm_taginfo_values or osm_taginfo_tag first.",
+      "If you are not sure which tag mappers use for something, check with osm_taginfo_search, osm_taginfo_values or osm_taginfo_tag first.",
       "Coordinates are latitude first. The result says when the data was last updated (timestampOsmBase).",
     ].join("\n"),
     inputSchema: {
@@ -130,7 +130,7 @@ server.registerTool(
     description: [
       "Find OpenStreetMap features with given tags around a point, nearest first, without writing Overpass QL.",
       "Example: ramen shops within 500 m are tags [{key: 'amenity', value: 'restaurant'}, {key: 'cuisine', value: 'ramen'}].",
-      "Every tag must match. If you are not sure which tags mappers use, check with osm_taginfo_values or osm_taginfo_tag first.",
+      "Every tag must match. If you are not sure which tags mappers use, check with osm_taginfo_search, osm_taginfo_values or osm_taginfo_tag first.",
       "Use osm_geocoding first to turn a place name into coordinates.",
     ].join("\n"),
     inputSchema: {
@@ -394,6 +394,25 @@ server.registerTool(
     annotations,
   },
   async ({ query, limit }) => result(await searchKeys(query, { limit }))
+);
+
+server.registerTool(
+  "osm_taginfo_search",
+  {
+    title: "Search OSM tags",
+    description: `Find OpenStreetMap tags of any key whose value contains a word, most used first. Use it when you do not know the key: 'ramen' finds cuisine=ramen. Search in English, because tag values are English: 'convenience' finds shop=convenience, while コンビニ only finds a few side tags and names. Words match whole: 'ram' does not find 'ramen'. Names show up too (name=...); prefer keys such as amenity, shop or cuisine. An empty result can also mean the taginfo instance has no search index. ${taginfoNote}`,
+    inputSchema: {
+      query: z.string().min(1).describe("A word or words to find in tag values"),
+      limit: z.number().int().min(1).max(100).default(20),
+    },
+    outputSchema: {
+      dataUntil,
+      total: z.number().describe("Number of matching tags"),
+      tags: z.array(z.object({ key: z.string(), value: z.string(), count: z.number() })),
+    },
+    annotations,
+  },
+  async ({ query, limit }) => result(await searchTags(query, { limit }))
 );
 
 server.registerTool(
