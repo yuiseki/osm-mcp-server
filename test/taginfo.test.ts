@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userAgent } from "../src/lib/config.js";
-import { describeTag, keyValues, searchKeys } from "../src/lib/taginfo.js";
+import { describeTag, ftsPhrase, keyValues, searchKeys, searchTags } from "../src/lib/taginfo.js";
 import { mockFetch, mockFetchByPath, requestOf } from "./helpers.js";
 
 afterEach(() => {
@@ -158,6 +158,45 @@ describe("describeTag", () => {
     expect(result.count.all).toBe(0);
     expect(result.wiki).toEqual([]);
     expect(result.combinations).toEqual([]);
+  });
+});
+
+describe("ftsPhrase", () => {
+  // taginfo passes the query to SQLite FTS5 as is and answers a syntax
+  // error with 0 results, so the query is always sent as one phrase.
+  it("quotes the query as one phrase", () => {
+    expect(ftsPhrase("ramen")).toBe('"ramen"');
+    expect(ftsPhrase("noodle;ramen")).toBe('"noodle;ramen"');
+    expect(ftsPhrase("-ramen")).toBe('"-ramen"');
+  });
+
+  it("doubles quotes inside it", () => {
+    expect(ftsPhrase('say "hi"')).toBe('"say ""hi"""');
+  });
+});
+
+describe("searchTags", () => {
+  it("returns tags whose value has the word, most used first", async () => {
+    const fetchMock = mockFetch(fixture("search-ramen-ja"));
+    const result = await searchTags("ラーメン", { limit: 5 });
+    expect(result.dataUntil).toBe("2026-01-29T00:59:50Z");
+    expect(result.total).toBe(fixture("search-ramen-ja").total);
+    expect(result.tags[0]).toEqual({ key: "cuisine:ja", value: "ラーメン", count: 508 });
+    const { url } = requestOf(fetchMock);
+    expect(url.pathname).toBe(`${api}/search/by_value`);
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      query: '"ラーメン"',
+      page: "1",
+      rp: "5",
+      sortname: "count_all",
+      sortorder: "desc",
+    });
+  });
+
+  it("asks for 20 by default", async () => {
+    const fetchMock = mockFetch(fixture("search-ramen-ja"));
+    await searchTags("ramen");
+    expect(requestOf(fetchMock).url.searchParams.get("rp")).toBe("20");
   });
 });
 
