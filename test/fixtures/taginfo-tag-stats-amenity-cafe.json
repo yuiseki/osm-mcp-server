@@ -1,0 +1,26 @@
+{
+  "data_until": "2026-01-29T00:59:50Z",
+  "total": 4,
+  "data": [
+    {
+      "type": "all",
+      "count": 618379,
+      "count_fraction": 0.0001
+    },
+    {
+      "type": "nodes",
+      "count": 533536,
+      "count_fraction": 0.0019
+    },
+    {
+      "type": "ways",
+      "count": 84264,
+      "count_fraction": 0.0001
+    },
+    {
+      "type": "relations",
+      "count": 579,
+      "count_fraction": 0
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import { z } from "zod";
 import { version } from "./lib/config.js";
 import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
 import { runOverpass } from "./lib/overpass.js";
+import { describeTag, keyValues, searchKeys } from "./lib/taginfo.js";
 import { costings, route } from "./lib/valhalla.js";
 import { language, latitude, longitude, place } from "./lib/schemas.js";
 
@@ -91,6 +92,7 @@ server.registerTool(
       "Tips: always limit the area with around:, a bbox (south,west,north,east) or an area found by name;",
       "use 'out center;' to get one coordinate for ways and relations; use 'out count;' to only count;",
       "add [timeout:N] for heavy queries. [out:json] is added for you; other output formats are not supported.",
+      "If you are not sure which tag mappers use for something, check with osm_taginfo_values or osm_taginfo_tag first.",
       "Coordinates are latitude first. The result says when the data was last updated (timestampOsmBase).",
     ].join("\n"),
     inputSchema: {
@@ -179,6 +181,114 @@ server.registerTool(
   },
   async ({ locations, costing, language, include_geometry }) =>
     result(await route(locations, { costing, language, includeGeometry: include_geometry }))
+);
+
+const taginfoNote =
+  "Counts come from taginfo and cover the whole planet; dataUntil says when its data was taken.";
+
+const dataUntil = z.string().nullable().describe("When the taginfo data was taken");
+
+server.registerTool(
+  "osm_taginfo_keys",
+  {
+    title: "Find OSM keys",
+    description: `Find OpenStreetMap tag keys whose name contains a word, most used first, e.g. 'cuisine' or 'opening_hours'. Use it to discover which keys exist before writing an Overpass query. ${taginfoNote}`,
+    inputSchema: {
+      query: z.string().min(1).describe("Part of the key name, in English as OSM keys are"),
+      limit: z.number().int().min(1).max(50).default(10),
+    },
+    outputSchema: {
+      dataUntil,
+      total: z.number().describe("Number of matching keys"),
+      keys: z.array(
+        z.object({
+          key: z.string(),
+          count: z.number().describe("Elements with this key"),
+          nodes: z.number(),
+          ways: z.number(),
+          relations: z.number(),
+          values: z.number().describe("Number of different values"),
+        })
+      ),
+    },
+    annotations,
+  },
+  async ({ query, limit }) => result(await searchKeys(query, { limit }))
+);
+
+server.registerTool(
+  "osm_taginfo_values",
+  {
+    title: "List OSM tag values",
+    description: `List the values used with an OpenStreetMap key, most used first, optionally only those containing a word. Use it to find the value mappers actually use, e.g. key 'cuisine' with query 'ramen'. ${taginfoNote}`,
+    inputSchema: {
+      key: z.string().min(1).describe("The tag key, e.g. amenity or cuisine"),
+      query: z.string().optional().describe("Only values containing this text"),
+      limit: z.number().int().min(1).max(100).default(20),
+    },
+    outputSchema: {
+      dataUntil,
+      key: z.string(),
+      total: z.number().describe("Number of matching values"),
+      values: z.array(
+        z.object({
+          value: z.string(),
+          count: z.number(),
+          fraction: z.number().describe("Share of the elements with this key"),
+        })
+      ),
+    },
+    annotations,
+  },
+  async ({ key, query, limit }) => result(await keyValues(key, { query, limit }))
+);
+
+server.registerTool(
+  "osm_taginfo_tag",
+  {
+    title: "Describe an OSM tag",
+    description: `Describe an OpenStreetMap tag (key and value) or a key on its own: how many nodes, ways and relations use it, what the OSM wiki says it means and which element types it is meant for, and the tags most often used together with it. Combinations are only computed for frequently used tags, so an empty list does not mean there are none. ${taginfoNote}`,
+    inputSchema: {
+      key: z.string().min(1).describe("The tag key, e.g. amenity"),
+      value: z.string().min(1).optional().describe("The tag value, e.g. cafe; leave out to describe the key"),
+      language: z
+        .string()
+        .optional()
+        .describe("Also return the wiki description in this language (e.g. ja); English is always included"),
+    },
+    outputSchema: {
+      dataUntil,
+      key: z.string(),
+      value: z.string().nullable(),
+      count: z.object({
+        all: z.number(),
+        nodes: z.number(),
+        ways: z.number(),
+        relations: z.number(),
+      }),
+      wiki: z.array(
+        z.object({
+          lang: z.string(),
+          title: z.string(),
+          description: z.string(),
+          status: z.string().optional().describe("e.g. approved, de facto, deprecated"),
+          usedOn: z.array(z.enum(["node", "way", "area", "relation"])),
+        })
+      ),
+      combinations: z
+        .array(
+          z.object({
+            key: z.string(),
+            value: z.string().nullable().describe("null when only the key is counted"),
+            count: z.number(),
+            fraction: z.number().describe("Share of the elements with this tag that also have it"),
+          })
+        )
+        .describe("Up to 10 tags most often used together with it"),
+    },
+    annotations,
+  },
+  async ({ key, value, language }) => result(await describeTag(key, value, { language }))
 );
 
 /**

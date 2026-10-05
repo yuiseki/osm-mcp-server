@@ -1,0 +1,53 @@
+{
+  "data_until": "2026-01-29T00:59:50Z",
+  "page": 1,
+  "rp": 3,
+  "total": 114,
+  "data": [
+    {
+      "key": "cuisine",
+      "count_all": 1433692,
+      "count_all_fraction": 0.0001,
+      "count_nodes": 1124730,
+      "count_nodes_fraction": 0.004,
+      "count_ways": 307162,
+      "count_ways_fraction": 0.0003,
+      "count_relations": 1800,
+      "count_relations_fraction": 0.0001,
+      "values_all": 77052,
+      "users_all": 117641,
+      "in_wiki": false,
+      "projects": 0
+    },
+    {
+      "key": "cuisine:ja",
+      "count_all": 3368,
+      "count_all_fraction": 0,
+      "count_nodes": 3006,
+      "count_nodes_fraction": 0,
+      "count_ways": 360,
+      "count_ways_fraction": 0,
+      "count_relations": 2,
+      "count_relations_fraction": 0,
+      "values_all": 494,
+      "users_all": 447,
+      "in_wiki": false,
+      "projects": 0
+    },
+    {
+      "key": "disused:cuisine",
+      "count_all": 3129,
+      "count_all_fraction": 0,
+      "count_nodes": 2619,
+      "count_nodes_fraction": 0,
+      "count_ways": 504,
+      "count_ways_fraction": 0,
+      "count_relations": 6,
+      "count_relations_fraction": 0,
+      "values_all": 333,
+      "users_all": 1553,
+      "in_wiki": false,
+      "projects": 0
+    }
+  ]
+}

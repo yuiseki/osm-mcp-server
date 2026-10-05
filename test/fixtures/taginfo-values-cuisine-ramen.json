@@ -1,0 +1,35 @@
+{
+  "data_until": "2026-01-29T00:59:50Z",
+  "page": 1,
+  "rp": 3,
+  "total": 654,
+  "data": [
+    {
+      "value": "ramen",
+      "count": 8213,
+      "fraction": 0.0057,
+      "in_wiki": false,
+      "description": "",
+      "desclang": "",
+      "descdir": ""
+    },
+    {
+      "value": "noodle;ramen",
+      "count": 1073,
+      "fraction": 0.0007,
+      "in_wiki": false,
+      "description": "",
+      "desclang": "",
+      "descdir": ""
+    },
+    {
+      "value": "japanese;ramen",
+      "count": 418,
+      "fraction": 0.0003,
+      "in_wiki": false,
+      "description": "",
+      "desclang": "",
+      "descdir": ""
+    }
+  ]
+}

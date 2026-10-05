@@ -1,6 +1,6 @@
 # osm-mcp-server
 
-An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use OpenStreetMap: find places, look up addresses, query map features with Overpass, and plan routes with Valhalla.
+An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use OpenStreetMap: find places, look up addresses, query map features with Overpass, plan routes with Valhalla, and look up which tags mappers use with taginfo.
 
 ## Tools
 
@@ -10,6 +10,9 @@ An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use Op
 | `osm_reverse_geocoding` | Nominatim | Finds the place and the address at a coordinate. |
 | `osm_overpass_query` | Overpass API | Runs an Overpass QL query and returns the matching elements (default 100, up to 1000), the total count, and when the data was last updated. |
 | `osm_routing` | Valhalla | Plans a route through 2 to 20 locations by car, on foot, by bicycle and more. Returns the distance, the travel time and turn-by-turn directions, and the route line on request. |
+| `osm_taginfo_keys` | taginfo | Finds tag keys whose name contains a word, most used first. |
+| `osm_taginfo_values` | taginfo | Lists the values used with a key, most used first, optionally only those containing a word (e.g. `cuisine` values with `ramen`). |
+| `osm_taginfo_tag` | taginfo | Describes a tag or a key: how often it is used on nodes, ways and relations, its OSM wiki description in English and one more language, and the tags most often used with it. |
 
 All tools are read-only. Each returns structured content with an output schema, and the same JSON as text for clients that do not read structured content. Errors from the services, such as an Overpass parse error or a place Valhalla cannot reach, come back as tool errors with the service's own message, so the assistant can correct the request.
 
@@ -58,6 +61,7 @@ By default the tools use the public OpenStreetMap services. To use your own, set
 | `NOMINATIM_URL` | `https://nominatim.openstreetmap.org` |
 | `OVERPASS_URL` | `https://overpass-api.de/api` |
 | `VALHALLA_URL` | `https://valhalla1.openstreetmap.de` |
+| `TAGINFO_URL` | `https://taginfo.openstreetmap.org` |
 
 For example:
 
@@ -70,7 +74,8 @@ For example:
       "env": {
         "NOMINATIM_URL": "https://nominatim.example.org",
         "OVERPASS_URL": "https://overpass.example.org/api",
-        "VALHALLA_URL": "https://valhalla.example.org"
+        "VALHALLA_URL": "https://valhalla.example.org",
+        "TAGINFO_URL": "https://taginfo.example.org"
       }
     }
   }
@@ -87,7 +92,7 @@ npm test            # unit tests, and the built server over stdio against a loca
 npm run test:live   # the built server against real services
 ```
 
-`npm test` needs no network and runs in CI on Node 22 and 24. `npm run test:live` is not part of CI. By default it uses the maintainer's self-hosted services; set the three variables above to test against your own.
+`npm test` needs no network and runs in CI on Node 22 and 24. `npm run test:live` is not part of CI. By default it uses the maintainer's self-hosted services; set the variables above to test against your own.
 
 ## License
 

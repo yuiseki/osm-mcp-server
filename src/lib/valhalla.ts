@@ -1,5 +1,5 @@
 import { endpoints } from "./config.js";
-import { request } from "./http.js";
+import { jsonErrorDetail, request } from "./http.js";
 
 export const costings = [
   "auto",
@@ -90,19 +90,6 @@ export const decodePolyline6 = (shape: string): [number, number][] => {
   return coordinates;
 };
 
-/** Valhalla explains a failed request in a JSON body. */
-export const valhallaErrorDetail = (body: string): string => {
-  try {
-    const { error, error_code } = JSON.parse(body);
-    if (typeof error === "string") {
-      return error_code === undefined ? error : `${error} (error_code ${error_code})`;
-    }
-  } catch {
-    // not JSON
-  }
-  return body;
-};
-
 export type RouteOptions = {
   costing: Costing;
   language?: string;
@@ -127,7 +114,7 @@ export const route = async (
         ...(language ? { language } : {}),
       }),
     },
-    valhallaErrorDetail
+    jsonErrorDetail
   );
   const { trip } = (await response.json()) as ValhallaRoute;
 

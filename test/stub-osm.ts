@@ -12,7 +12,7 @@ export type StubRequest = {
 export type StubResponse = { status?: number; body: unknown };
 
 /**
- * A local HTTP server standing in for Nominatim, Overpass and Valhalla, so the
+ * A local HTTP server standing in for Nominatim, Overpass, Valhalla and taginfo, so the
  * built bin can be tested end to end without the network. Each path answers
  * with whatever the test put in routes; every request is recorded.
  */
@@ -51,6 +51,7 @@ export const startStubOsm = async () => {
       NOMINATIM_URL: `${base}/nominatim`,
       OVERPASS_URL: `${base}/overpass/api`,
       VALHALLA_URL: `${base}/valhalla`,
+      TAGINFO_URL: `${base}/taginfo`,
     },
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };

@@ -12,6 +12,7 @@ describe("endpoints", () => {
       nominatim: "https://nominatim.openstreetmap.org",
       overpass: "https://overpass-api.de/api",
       valhalla: "https://valhalla1.openstreetmap.de",
+      taginfo: "https://taginfo.openstreetmap.org",
     });
   });
 
@@ -21,11 +22,13 @@ describe("endpoints", () => {
         NOMINATIM_URL: "https://nominatim.example.org",
         OVERPASS_URL: "https://overpass.example.org/api",
         VALHALLA_URL: "https://valhalla.example.org",
+        TAGINFO_URL: "https://taginfo.example.org",
       })
     ).toEqual({
       nominatim: "https://nominatim.example.org",
       overpass: "https://overpass.example.org/api",
       valhalla: "https://valhalla.example.org",
+      taginfo: "https://taginfo.example.org",
     });
   });
 

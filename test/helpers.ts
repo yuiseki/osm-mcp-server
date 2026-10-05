@@ -25,3 +25,18 @@ export const requestOf = (fetchMock: ReturnType<typeof mockFetch>) => {
     body: options?.body,
   };
 };
+
+/**
+ * Replaces the global fetch with one that answers by URL path. Paths without
+ * a body get a 404.
+ */
+export const mockFetchByPath = (bodies: Record<string, unknown>) => {
+  const fetchMock = vi.fn(async (url: string, _options?: RequestInit) => {
+    const { pathname } = new URL(url);
+    return pathname in bodies
+      ? new Response(JSON.stringify(bodies[pathname]), { status: 200 })
+      : new Response("not found", { status: 404, statusText: "Not Found" });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+};

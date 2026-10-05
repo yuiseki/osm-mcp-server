@@ -86,6 +86,9 @@ describe("osm-mcp-server over stdio", () => {
       "osm_overpass_query",
       "osm_reverse_geocoding",
       "osm_routing",
+      "osm_taginfo_keys",
+      "osm_taginfo_tag",
+      "osm_taginfo_values",
     ]);
   });
 
@@ -299,5 +302,58 @@ describe("osm_routing", () => {
     expect(await errorText("osm_routing", { locations })).toBe(
       "Valhalla route failed: 400 Bad Request\nNo suitable edges near location (error_code 171)"
     );
+  });
+});
+
+describe("taginfo tools", () => {
+  const fixture = (name: string) =>
+    JSON.parse(readFileSync(new URL(`./fixtures/taginfo-${name}.json`, import.meta.url), "utf8"));
+  const api = "/taginfo/api/4";
+
+  it("osm_taginfo_keys finds keys", async () => {
+    stub.routes.set(`${api}/keys/all`, () => ({ body: fixture("keys-cuisine") }));
+    const result = await structured("osm_taginfo_keys", { query: "cuisine" });
+    expect(result.keys[0]).toMatchObject({ key: "cuisine", count: 1433692 });
+    expect(stub.requests[0].query.get("rp")).toBe("10");
+  });
+
+  it("osm_taginfo_values lists values of a key", async () => {
+    stub.routes.set(`${api}/key/values`, () => ({ body: fixture("values-cuisine-ramen") }));
+    const result = await structured("osm_taginfo_values", { key: "cuisine", query: "ramen", limit: 3 });
+    expect(result.values[0]).toEqual({ value: "ramen", count: 8213, fraction: 0.0057 });
+    expect(stub.requests[0].query.get("query")).toBe("ramen");
+    expect(stub.requests[0].query.get("rp")).toBe("3");
+  });
+
+  it("osm_taginfo_tag describes a tag", async () => {
+    stub.routes.set(`${api}/tag/stats`, () => ({ body: fixture("tag-stats-amenity-cafe") }));
+    stub.routes.set(`${api}/tag/wiki_pages`, () => ({ body: fixture("tag-wiki-amenity-cafe") }));
+    stub.routes.set(`${api}/tag/combinations`, () => ({ body: fixture("tag-combinations-amenity-cafe") }));
+    const result = await structured("osm_taginfo_tag", { key: "amenity", value: "cafe", language: "ja" });
+    expect(result.count.all).toBe(618379);
+    expect(result.wiki.map((w: { lang: string }) => w.lang)).toEqual(["en", "ja"]);
+    expect(result.combinations[0].key).toBe("name");
+  });
+
+  it("osm_taginfo_tag describes a key without a value", async () => {
+    stub.routes.set(`${api}/key/stats`, () => ({ body: fixture("key-stats-cuisine") }));
+    stub.routes.set(`${api}/key/wiki_pages`, () => ({ body: fixture("key-wiki-cuisine") }));
+    stub.routes.set(`${api}/key/combinations`, () => ({ body: fixture("key-combinations-cuisine") }));
+    const result = await structured("osm_taginfo_tag", { key: "cuisine" });
+    expect(result).toMatchObject({ key: "cuisine", value: null });
+  });
+
+  it("reports taginfo's error as a tool error", async () => {
+    stub.routes.set(`${api}/key/values`, () => ({
+      status: 412,
+      body: { error: "number of results too large, use paging" },
+    }));
+    expect(await errorText("osm_taginfo_values", { key: "amenity" })).toBe(
+      "taginfo failed: 412 Precondition Failed\nnumber of results too large, use paging"
+    );
+  });
+
+  it("reports an empty key as a tool error", async () => {
+    expect(await errorText("osm_taginfo_values", { key: "" })).toMatch(/key/);
   });
 });

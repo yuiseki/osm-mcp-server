@@ -16,20 +16,23 @@ export type Endpoints = {
   nominatim: string;
   overpass: string;
   valhalla: string;
+  taginfo: string;
 };
 
 const defaults: Endpoints = {
   nominatim: "https://nominatim.openstreetmap.org",
   overpass: "https://overpass-api.de/api",
   valhalla: "https://valhalla1.openstreetmap.de",
+  taginfo: "https://taginfo.openstreetmap.org",
 };
 
 const pick = (value: string | undefined, fallback: string) =>
   (value || fallback).replace(/\/+$/, "");
 
 /**
- * Base URLs of the services, overridable with NOMINATIM_URL, OVERPASS_URL
- * and VALHALLA_URL so the server can point at a self-hosted OSM stack.
+ * Base URLs of the services, overridable with NOMINATIM_URL, OVERPASS_URL,
+ * VALHALLA_URL and TAGINFO_URL so the server can point at a self-hosted OSM
+ * stack.
  */
 export const endpoints = (
   env: Record<string, string | undefined> = process.env
@@ -37,4 +40,5 @@ export const endpoints = (
   nominatim: pick(env.NOMINATIM_URL, defaults.nominatim),
   overpass: pick(env.OVERPASS_URL, defaults.overpass),
   valhalla: pick(env.VALHALLA_URL, defaults.valhalla),
+  taginfo: pick(env.TAGINFO_URL, defaults.taginfo),
 });
