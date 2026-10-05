@@ -178,6 +178,18 @@ server.registerTool(
     result(await searchNearby({ lat, lon, radiusM: radius_m, tags, name, limit }))
 );
 
+const snappedTo = z
+  .object({
+    lat: latitude,
+    lon: longitude,
+    distanceM: z.number().describe("How far that is from the location given"),
+    roadNames: z.array(z.string()).describe("Names of the road, path or ferry line it is on"),
+  })
+  .nullable()
+  .describe("Where the location was placed on the network; null when there is nothing within reach");
+
+const snappedLocation = z.object({ lat: latitude, lon: longitude, snappedTo });
+
 const routeOutput = {
   costing: z.enum(costings),
   distanceKm: z.number(),
@@ -207,6 +219,11 @@ const routeOutput = {
       coordinates: z.array(z.tuple([z.number(), z.number()])),
     })
     .optional(),
+  locations: z
+    .array(snappedLocation)
+    .describe(
+      "The locations given, in the same order, with where each was placed. A large distanceM, or a ferry line in roadNames, explains a surprisingly long route"
+    ),
 };
 
 const costing = z
@@ -319,20 +336,13 @@ server.registerTool(
     result(await optimizedRoute(locations, { costing, language, includeGeometry: include_geometry }))
 );
 
-const snappedLocation = z.object({
-  lat: latitude,
-  lon: longitude,
-  snappedTo: z
-    .object({ lat: latitude, lon: longitude, distanceM: z.number() })
-    .describe("Where the location was placed on the road network, and how far that is from it"),
-});
 
 server.registerTool(
   "osm_route_matrix",
   {
     title: "Travel time matrix",
     description:
-      "Travel time and distance by road from every source to every target with Valhalla, e.g. to find which of several shops is quickest to reach. matrix[i][j] is from sources[i] to targets[j], or null when there is no route. Check snappedTo: a large distanceM means a location is far from any road or path, and its times are not to be trusted. Times can include ferries (a walk across Tokyo may take a water bus); use osm_routing to see how a pair is travelled.",
+      "Travel time and distance by road from every source to every target with Valhalla, e.g. to find which of several shops is quickest to reach. matrix[i][j] is from sources[i] to targets[j], or null when there is no route. Check snappedTo: a large distanceM means a location is far from any road or path, and roadNames shows what it was placed on (a ferry line explains a very long time); such times are not to be trusted. Times can include ferries (a walk across Tokyo may take a water bus); use osm_routing to see how a pair is travelled.",
     inputSchema: {
       sources: z.array(point).min(1).max(25).describe("Where to start from"),
       targets: z.array(point).min(1).max(25).describe("Where to go to"),

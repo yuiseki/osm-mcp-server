@@ -1,0 +1,60 @@
+[
+  {
+    "input_lat": 35.6586,
+    "input_lon": 139.7454,
+    "nodes": [],
+    "edges": [
+      {
+        "correlated_lat": 35.658792,
+        "correlated_lon": 139.745632,
+        "distance": 29.9,
+        "edge_info": {
+          "names": []
+        }
+      },
+      {
+        "correlated_lat": 35.658792,
+        "correlated_lon": 139.745632,
+        "distance": 29.9,
+        "edge_info": {
+          "names": []
+        }
+      }
+    ]
+  },
+  {
+    "input_lat": 35.55,
+    "input_lon": 139.9,
+    "nodes": [],
+    "edges": [
+      {
+        "correlated_lat": 35.554094,
+        "correlated_lon": 139.863899,
+        "distance": 3301.2,
+        "edge_info": {
+          "names": [
+            "オーシャン東九フェリー（東京―徳島―北九州）",
+            "Ocean Tokyu Ferry (Tokyo - Tokushima - Kitakyushu)"
+          ]
+        }
+      },
+      {
+        "correlated_lat": 35.554094,
+        "correlated_lon": 139.863899,
+        "distance": 3301.2,
+        "edge_info": {
+          "names": [
+            "オーシャン東九フェリー（東京―徳島―北九州）",
+            "Ocean Tokyu Ferry (Tokyo - Tokushima - Kitakyushu)"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "input_lat": 30,
+    "input_lon": -140,
+    "nodes": [],
+    "edges": []
+  }
+]
