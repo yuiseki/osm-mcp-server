@@ -7,8 +7,9 @@ const pkg = JSON.parse(
 
 export const version: string = pkg.version;
 
-// Nominatim's usage policy requires an identifying User-Agent; requests with
-// the default one sent by Node's fetch are rejected with 403.
+// The public services reject the default User-Agent sent by Node's fetch:
+// Nominatim with 403, as its usage policy requires an identifying one, and
+// overpass-api.de with 406. Every request carries this one instead.
 // https://operations.osmfoundation.org/policies/nominatim/
 export const userAgent = `osm-mcp-server/${version} (+https://github.com/yuiseki/osm-mcp-server)`;
 
