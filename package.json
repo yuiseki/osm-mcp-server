@@ -17,11 +17,12 @@
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
     "lint": "tsc --noEmit && tsc --noEmit -p test",
-    "test": "vitest run"
+    "test": "vitest run --exclude 'test/live/**'",
+    "test:live": "npm run build && vitest run test/live"
   },
   "dependencies": {
-    "@birchill/tiny-segmenter": "^1.0.0",
-    "@modelcontextprotocol/sdk": "1.32.0"
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

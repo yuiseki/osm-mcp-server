@@ -4,118 +4,182 @@
  * This is a MCP server that provides API access to the OpenStreetMap APIs.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import { geocodeNominatim, reverseGeocodeNominatim } from "./lib/nominatim.js";
+import { z } from "zod";
+import { version } from "./lib/config.js";
+import { reverseGeocode, searchPlaces } from "./lib/nominatim.js";
+import { runOverpass } from "./lib/overpass.js";
+import { costings, route } from "./lib/valhalla.js";
+import { language, latitude, longitude, place } from "./lib/schemas.js";
 
-const server = new Server(
+const server = new McpServer({
+  name: "osm-mcp-server",
+  version,
+});
+
+// Every tool only reads from external OpenStreetMap services.
+const annotations = { readOnlyHint: true, openWorldHint: true };
+
+// structuredContent for clients that read it, and the same as JSON text for
+// those that do not.
+const result = <T extends Record<string, unknown>>(value: T) => ({
+  structuredContent: value,
+  content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
+});
+
+server.registerTool(
+  "osm_geocoding",
   {
-    name: "osm-mcp-server",
-    version: "0.1.0",
-  },
-  {
-    capabilities: {
-      resources: {},
-      tools: {},
+    title: "Geocode",
+    description:
+      "Find places by name or address with OpenStreetMap Nominatim. Returns several candidates, best match first, because names are often ambiguous; check displayName to pick the right one, or narrow the search with countrycodes.",
+    inputSchema: {
+      text: z.string().min(1).describe("The text to geocode (Address or place name)"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(20)
+        .default(5)
+        .describe("Maximum number of candidates"),
+      countrycodes: z
+        .array(z.string().length(2))
+        .optional()
+        .describe("Only return places in these countries (ISO 3166-1 alpha-2, e.g. ['jp'])"),
+      language,
     },
-  }
+    outputSchema: { results: z.array(place) },
+    annotations,
+  },
+  async ({ text, limit, countrycodes, language }) =>
+    result({
+      results: await searchPlaces(text, { limit, countryCodes: countrycodes, language }),
+    })
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: "osm_geocoding",
-        description:
-          "Geocoding tool that uses the OpenStreetMap Nominatim API.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            text: {
-              type: "string",
-              description: "The text to geocode (Address or place name)",
-            },
-          },
-          required: ["text"],
-        },
-      },
-      {
-        name: "osm_reverse_geocoding",
-        description:
-          "Reverse geocoding tool that uses the OpenStreetMap Nominatim API.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            lat: {
-              type: "number",
-              description: "Latitude of the location to reverse geocode",
-            },
-            lon: {
-              type: "number",
-              description: "Longitude of the location to reverse geocode",
-            },
-          },
-          required: ["lat", "lon"],
-        },
-      },
-    ],
-  };
-});
+server.registerTool(
+  "osm_reverse_geocoding",
+  {
+    title: "Reverse geocode",
+    description:
+      "Find the place and address at a coordinate with OpenStreetMap Nominatim.",
+    inputSchema: {
+      lat: latitude.describe("Latitude of the location to reverse geocode"),
+      lon: longitude.describe("Longitude of the location to reverse geocode"),
+      language,
+    },
+    outputSchema: place.extend({
+      address: z
+        .record(z.string(), z.string())
+        .describe("Address parts, e.g. road, city, postcode, country_code"),
+    }).shape,
+    annotations,
+  },
+  async ({ lat, lon, language }) =>
+    result(await reverseGeocode(lat, lon, { language }))
+);
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  switch (request.params.name) {
-    case "osm_geocoding": {
-      if (
-        !request.params.arguments ||
-        typeof request.params.arguments.text !== "string"
-      ) {
-        throw new Error(
-          "Invalid arguments: 'text' is required and must be a string."
-        );
-      }
+server.registerTool(
+  "osm_overpass_query",
+  {
+    title: "Overpass query",
+    description: [
+      "Run an Overpass QL query against OpenStreetMap data and return the matching elements as JSON.",
+      "Use it to find features by tag in an area, e.g. cafes within 500 m of a point:",
+      "  nwr(around:500,35.6586,139.7454)[amenity=cafe]; out center;",
+      "Tips: always limit the area with around:, a bbox (south,west,north,east) or an area found by name;",
+      "use 'out center;' to get one coordinate for ways and relations; use 'out count;' to only count;",
+      "add [timeout:N] for heavy queries. [out:json] is added for you; other output formats are not supported.",
+      "Coordinates are latitude first. The result says when the data was last updated (timestampOsmBase).",
+    ].join("\n"),
+    inputSchema: {
+      query: z.string().min(1).describe("Overpass QL query"),
+      max_elements: z
+        .number()
+        .int()
+        .min(1)
+        .max(1000)
+        .default(100)
+        .describe("Maximum number of elements to return; the rest are dropped and truncated is set"),
+    },
+    outputSchema: {
+      timestampOsmBase: z
+        .string()
+        .nullable()
+        .describe("When the OSM data behind the answer was last updated"),
+      totalElements: z.number().describe("Number of elements the query matched"),
+      truncated: z.boolean().describe("True when elements were dropped to fit max_elements"),
+      elements: z
+        .array(z.looseObject({ type: z.string(), id: z.number() }))
+        .describe("OSM elements as returned by Overpass (type, id, tags, lat/lon or center, ...)"),
+    },
+    annotations,
+  },
+  async ({ query, max_elements }) =>
+    result(await runOverpass(query, { maxElements: max_elements }))
+);
 
-      const text = request.params.arguments.text;
-      const { lat, lon } = await geocodeNominatim(text);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `The geocoded location is at latitude ${lat} and longitude ${lon}.`,
-          },
-        ],
-      };
-    }
-    case "osm_reverse_geocoding": {
-      if (
-        !request.params.arguments ||
-        typeof request.params.arguments.lat !== "number" ||
-        typeof request.params.arguments.lon !== "number"
-      ) {
-        throw new Error(
-          "Invalid arguments: 'lat' and 'lon' are required and must be numbers."
-        );
-      }
-
-      const { lat, lon } = request.params.arguments;
-      const { displayName } = await reverseGeocodeNominatim(lat, lon);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: displayName,
-          },
-        ],
-      };
-    }
-    default:
-      throw new Error(`Unknown tool: ${request.params.name}`);
-  }
-});
+server.registerTool(
+  "osm_routing",
+  {
+    title: "Route",
+    description:
+      "Find a route through two or more locations in order with Valhalla, using OpenStreetMap roads and paths. Returns the distance, the travel time and turn-by-turn directions. Use osm_geocoding first to turn place names into coordinates.",
+    inputSchema: {
+      locations: z
+        .array(z.object({ lat: latitude, lon: longitude }))
+        .min(2)
+        .max(20)
+        .describe("Start, optional stops, and destination, in order"),
+      costing: z
+        .enum(costings)
+        .default("auto")
+        .describe("How to travel: auto (car), pedestrian, bicycle, ..."),
+      language: z
+        .string()
+        .optional()
+        .describe("Language of the directions, e.g. en-US or ja-JP"),
+      include_geometry: z
+        .boolean()
+        .default(false)
+        .describe("Also return the route line as a GeoJSON LineString ([lon, lat] pairs); it can be long"),
+    },
+    outputSchema: {
+      costing: z.enum(costings),
+      distanceKm: z.number(),
+      durationSeconds: z.number(),
+      hasToll: z.boolean(),
+      hasHighway: z.boolean(),
+      hasFerry: z.boolean(),
+      legs: z
+        .array(
+          z.object({
+            distanceKm: z.number(),
+            durationSeconds: z.number(),
+            maneuvers: z.array(
+              z.object({
+                instruction: z.string(),
+                distanceKm: z.number(),
+                durationSeconds: z.number(),
+                streetNames: z.array(z.string()).optional(),
+              })
+            ),
+          })
+        )
+        .describe("One leg between each pair of consecutive locations"),
+      geometry: z
+        .object({
+          type: z.literal("LineString"),
+          coordinates: z.array(z.tuple([z.number(), z.number()])),
+        })
+        .optional(),
+    },
+    annotations,
+  },
+  async ({ locations, costing, language, include_geometry }) =>
+    result(await route(locations, { costing, language, includeGeometry: include_geometry }))
+);
 
 /**
  * Start the server using stdio transport.

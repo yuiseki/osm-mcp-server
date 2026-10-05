@@ -1,1 +1,94 @@
 # osm-mcp-server
+
+An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants use OpenStreetMap: find places, look up addresses, query map features with Overpass, and plan routes with Valhalla.
+
+## Tools
+
+| Tool | Service | What it does |
+|---|---|---|
+| `osm_geocoding` | Nominatim | Finds places by name or address. Returns several candidates (default 5, up to 20), because names are often ambiguous. Can be limited to countries and asked for a language. |
+| `osm_reverse_geocoding` | Nominatim | Finds the place and the address at a coordinate. |
+| `osm_overpass_query` | Overpass API | Runs an Overpass QL query and returns the matching elements (default 100, up to 1000), the total count, and when the data was last updated. |
+| `osm_routing` | Valhalla | Plans a route through 2 to 20 locations by car, on foot, by bicycle and more. Returns the distance, the travel time and turn-by-turn directions, and the route line on request. |
+
+All tools are read-only. Each returns structured content with an output schema, and the same JSON as text for clients that do not read structured content. Errors from the services, such as an Overpass parse error or a place Valhalla cannot reach, come back as tool errors with the service's own message, so the assistant can correct the request.
+
+## Setup
+
+Requires Node.js 22.12 or later.
+
+```sh
+git clone https://github.com/yuiseki/osm-mcp-server.git
+cd osm-mcp-server
+npm install   # also builds build/index.js
+```
+
+Then register `build/index.js` with your MCP client. For Claude Code:
+
+```sh
+claude mcp add osm -- node /path/to/osm-mcp-server/build/index.js
+```
+
+For Claude Desktop and other clients that use a JSON config:
+
+```json
+{
+  "mcpServers": {
+    "osm": {
+      "command": "node",
+      "args": ["/path/to/osm-mcp-server/build/index.js"]
+    }
+  }
+}
+```
+
+Or run it with Docker:
+
+```sh
+docker build -t osm-mcp-server .
+docker run -i --rm osm-mcp-server
+```
+
+## Choosing the servers
+
+By default the tools use the public OpenStreetMap services. To use your own, set these environment variables:
+
+| Variable | Default |
+|---|---|
+| `NOMINATIM_URL` | `https://nominatim.openstreetmap.org` |
+| `OVERPASS_URL` | `https://overpass-api.de/api` |
+| `VALHALLA_URL` | `https://valhalla1.openstreetmap.de` |
+
+For example:
+
+```json
+{
+  "mcpServers": {
+    "osm": {
+      "command": "node",
+      "args": ["/path/to/osm-mcp-server/build/index.js"],
+      "env": {
+        "NOMINATIM_URL": "https://nominatim.example.org",
+        "OVERPASS_URL": "https://overpass.example.org/api",
+        "VALHALLA_URL": "https://valhalla.example.org"
+      }
+    }
+  }
+}
+```
+
+The public services are shared, run by volunteers, and each has a usage policy that limits how often you may call it (for example [Nominatim's](https://operations.osmfoundation.org/policies/nominatim/)). For heavy use, run your own. Every request carries a `User-Agent` that names this project.
+
+## Development
+
+```sh
+npm run lint        # type-check the source and the tests
+npm test            # unit tests, and the built server over stdio against a local stub of the services
+npm run test:live   # the built server against real services
+```
+
+`npm test` needs no network and runs in CI on Node 22 and 24. `npm run test:live` is not part of CI. By default it uses the maintainer's self-hosted services; set the three variables above to test against your own.
+
+## License
+
+MIT. Map data © OpenStreetMap contributors, available under the [Open Database License](https://www.openstreetmap.org/copyright).

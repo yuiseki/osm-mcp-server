@@ -1,0 +1,61 @@
+{
+  "trip": {
+    "status": 0,
+    "units": "kilometers",
+    "language": "en-US",
+    "summary": {
+      "has_time_restrictions": false,
+      "has_toll": false,
+      "has_highway": false,
+      "has_ferry": false,
+      "min_lat": 35.658601,
+      "min_lon": 139.745632,
+      "max_lat": 35.681636,
+      "max_lon": 139.767153,
+      "time": 2743.561,
+      "length": 3.801,
+      "cost": 2813.561
+    },
+    "legs": [
+      {
+        "summary": {
+          "has_time_restrictions": false,
+          "has_toll": false,
+          "has_highway": false,
+          "has_ferry": false,
+          "min_lat": 35.658601,
+          "min_lon": 139.745632,
+          "max_lat": 35.681636,
+          "max_lon": 139.767153,
+          "time": 2743.561,
+          "length": 3.801,
+          "cost": 2813.561
+        },
+        "shape": "oam_cA_ukpiGg@Y_G}D{@i@{AeAvB{E~Mq^dFkQaJuB{J_CmP_IsWqNaCBk@cIgEoGi@wB_CwJc@uLAeYK_IZ?b@AlA?@aJn@oCVoIh@mIzEyh@bEkj@JuAqDu@QuAy@cA}gAcb@eAn@y@d@uDsBqEyBQaAk@g@[YaCaA}IyCuFkCsIaD_NmE{K{D}@_@{@a@sh@}Ri@S}@Z_@_@q@Yc@Sy@SOi@gAa@aRaHa@Kg@MuSuHOGaAo@wAq@iTuHw@WUKkTcIs@YsAg@eBS]O{TmIOp@w@Yw@Y_Cy@cC{@g@S_A[No@uVsI{v@mXuSoIcEqAkDgAeAi@oa@{NuFoBeA_@c@QaA[aA]sW{IqGyBm@^aAVkBm@eEuA{CcAQiAa@gAn@aDs]uM}WmHmy@ib@mGcD{BmAwBkAgGgDiJcFw_@_S{^uR}v@ub@_FwDgEiE}dAieAo[o[eBeBgG}FwEsE_FsE{K_I{@i@mFkBiWoG}n@cPw~Aq`@yBi@_HmAsFcA`AsHx@iG{A]aAUnB_OpFsa@IgDRgBJq@r@}Ep@yEwAkDKoBCaBaA{Ak@u@k@_AsCw@ZeCOMMQEWAWDWHSiAoBBoAH{CCyAc@yBc@mBSm@iBqBu@k@_@mAYiABmAr@iGg\\aHr@oFaGwA_E{@uY_HkNcDyFsA_Ba@sIsBoBoL?w@|AeMjAaJ^qCr@{E}Co@JmAHo@}@_D_Ck@eFsAx@wEyAa@cCq@cB_FwPsEaBa@qI^qA[}G_ByHiBy@S^oCj@qDZuB|AcKb@wCn@mEhA_Ip@qEj@_Ej@{DHi@tAmJn@iEnFvA",
+        "maneuvers": [
+          {
+            "type": 1,
+            "instruction": "Walk northeast on the walkway.",
+            "time": 23.47,
+            "length": 0.029,
+            "street_names": null
+          },
+          {
+            "type": 10,
+            "instruction": "Turn right onto the walkway.",
+            "time": 66.352,
+            "length": 0.094,
+            "street_names": null
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left onto the walkway.",
+            "time": 93.882,
+            "length": 0.133,
+            "street_names": null
+          }
+        ]
+      }
+    ]
+  }
+}
